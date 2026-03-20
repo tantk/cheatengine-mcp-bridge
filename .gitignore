@@ -1,3 +1,20 @@
 game_dump.txt
 forum_post.txt
 longyin_plus
+
+# Reference / third-party extracted files (large, not ours)
+**/reference/
+
+# Archived old cheat tables
+**/patches/archive/
+
+# Debug logs
+*.log
+
+# Temp / OS files
+*.tmp
+Thumbs.db
+desktop.ini
+
+# Excel lock files
+~$*.xlsx
