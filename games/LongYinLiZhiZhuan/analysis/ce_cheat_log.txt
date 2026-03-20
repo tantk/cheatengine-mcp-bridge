@@ -1,0 +1,3 @@
+[14:59:31] [TalentCap] Patched at 0x7FFD7D2F7483 (max talents: 99)
+[14:59:41] [StatCap] Boosted all stat caps to 99.0
+[15:08:05] [StatCap] Timer error: C:\Program Files\Cheat Engine 7.5\autorun\monoscript.lua:1193: attempt to index a nil value (global 'monopipe')

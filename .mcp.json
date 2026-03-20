@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "cheatengine": {
+      "command": "python",
+      "args": ["C:/dev/cheatenginemcp/MCP_Server/mcp_cheatengine.py"]
+    }
+  }
+}

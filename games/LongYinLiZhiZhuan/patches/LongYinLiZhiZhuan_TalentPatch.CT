@@ -1,0 +1,513 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CheatTable>
+  <CheatEntries>
+    <CheatEntry>
+      <ID>0</ID>
+      <Description>"LongYinLiZhiZhuan (v1.0) - Attach to game first, then enable cheats"</Description>
+      <GroupHeader>1</GroupHeader>
+      <Color>FF0000</Color>
+      <CheatEntries>
+
+        <CheatEntry>
+          <ID>10</ID>
+          <Description>"--- Resources ---"</Description>
+          <GroupHeader>1</GroupHeader>
+          <Color>008000</Color>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>700</ID>
+              <Description>"Set Money (Silver)"</Description>
+              <Color>000000</Color>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript>
+[ENABLE]
+{$lua}
+if syntaxcheck then return end
+LaunchMonoDataCollector()
+local gcId = mono_findClass("", "GameController")
+local fields = mono_class_enumFields(gcId)
+local gcInstance = nil
+for _, f in ipairs(fields) do
+  if f.name == "_instance" then
+    gcInstance = mono_class_getStaticFieldValue(gcId, f.field)
+    break
+  end
+end
+if not gcInstance or gcInstance == 0 then error("GameController not found") end
+local worldData = readQword(gcInstance + 0x20)
+local herosList = readQword(worldData + 0x50)
+local itemsPtr = readQword(herosList + 0x10)
+local hero = readQword(itemsPtr + 0x20)
+if not hero or hero == 0 then error("Hero not found") end
+local itemListData = readQword(hero + 0x220)
+if not itemListData or itemListData == 0 then error("ItemListData not found") end
+local cur = readInteger(itemListData + 0x18)
+local input = InputQuery("Set Money", "Current: " .. cur .. " silver. Enter new value:", "9999")
+if input then
+  local val = tonumber(input) or 9999
+  writeInteger(itemListData + 0x18, math.floor(val))
+  print(string.format("[Money] Set to %d silver", val))
+end
+{$asm}
+
+[DISABLE]
+{$lua}
+if syntaxcheck then return end
+print("[Money] (value remains as set)")
+{$asm}
+              </AssemblerScript>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>600</ID>
+              <Description>"Set Sect Currency (forceContribution)"</Description>
+              <Color>000000</Color>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript>
+[ENABLE]
+{$lua}
+if syntaxcheck then return end
+LaunchMonoDataCollector()
+local gcId = mono_findClass("", "GameController")
+local fields = mono_class_enumFields(gcId)
+local gcInstance = nil
+for _, f in ipairs(fields) do
+  if f.name == "_instance" then
+    gcInstance = mono_class_getStaticFieldValue(gcId, f.field)
+    break
+  end
+end
+if not gcInstance or gcInstance == 0 then error("GameController not found") end
+local worldData = readQword(gcInstance + 0x20)
+local herosList = readQword(worldData + 0x50)
+local itemsPtr = readQword(herosList + 0x10)
+local hero = readQword(itemsPtr + 0x20)
+if not hero or hero == 0 then error("Hero not found") end
+local cur = readFloat(hero + 0x1C0)
+local input = InputQuery("Sect Currency", "Current: " .. string.format("%.1f", cur) .. ". Enter new value:", "1000")
+if input then
+  local val = tonumber(input) or 1000
+  writeFloat(hero + 0x1C0, val * 1.0)
+  print(string.format("[SectCurrency] Set to %.0f", val))
+end
+{$asm}
+
+[DISABLE]
+{$lua}
+if syntaxcheck then return end
+print("[SectCurrency] (value remains as set)")
+{$asm}
+              </AssemblerScript>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+
+        <CheatEntry>
+          <ID>20</ID>
+          <Description>"--- Talents (TianFu) ---"</Description>
+          <GroupHeader>1</GroupHeader>
+          <Color>008000</Color>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>300</ID>
+              <Description>"Max Talent Slots (9 -> 99)"</Description>
+              <Color>000000</Color>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript>
+[ENABLE]
+{$lua}
+if syntaxcheck then return end
+LaunchMonoDataCollector()
+local classId = mono_findClass("", "HeroData")
+if not classId or classId == 0 then error("HeroData not found") end
+local methods = mono_class_enumMethods(classId)
+local targetAddr = nil
+for _, m in ipairs(methods) do
+  if m.name == "GetMaxTagNum" then
+    targetAddr = mono_compile_method(m.method)
+    break
+  end
+end
+if not targetAddr or targetAddr == 0 then error("GetMaxTagNum not found") end
+for offset = 0, 511 do
+  local b1 = readBytes(targetAddr + offset, 1)
+  local b2 = readBytes(targetAddr + offset + 1, 1)
+  local b3 = readBytes(targetAddr + offset + 2, 1)
+  if b1 == 0x83 and b2 == 0xC0 and (b3 == 0x09 or b3 == 0x63) then
+    local b4 = readBytes(targetAddr + offset + 3, 1)
+    local b5 = readBytes(targetAddr + offset + 4, 1)
+    if b4 == 0x48 and b5 == 0x83 then
+      talentCapPatchAddr = targetAddr + offset + 2
+      talentCapOrigByte = 0x09
+      if b3 == 0x63 then
+        print(string.format("[TalentCap] Already patched at 0x%X", targetAddr + offset))
+      else
+        writeBytes(talentCapPatchAddr, 0x63)
+        print(string.format("[TalentCap] Patched at 0x%X (max: 99)", targetAddr + offset))
+      end
+      return
+    end
+  end
+end
+error("Patch pattern not found")
+{$asm}
+
+[DISABLE]
+{$lua}
+if syntaxcheck then return end
+if talentCapPatchAddr and talentCapOrigByte then
+  writeBytes(talentCapPatchAddr, talentCapOrigByte)
+  print("[TalentCap] Restored original cap (9)")
+  talentCapPatchAddr = nil
+  talentCapOrigByte = nil
+end
+{$asm}
+              </AssemblerScript>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>500</ID>
+              <Description>"Set Talent Points (heroTagPoint)"</Description>
+              <Color>000000</Color>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript>
+[ENABLE]
+{$lua}
+if syntaxcheck then return end
+LaunchMonoDataCollector()
+local gcId = mono_findClass("", "GameController")
+local fields = mono_class_enumFields(gcId)
+local gcInstance = nil
+for _, f in ipairs(fields) do
+  if f.name == "_instance" then
+    gcInstance = mono_class_getStaticFieldValue(gcId, f.field)
+    break
+  end
+end
+if not gcInstance or gcInstance == 0 then error("GameController not found") end
+local worldData = readQword(gcInstance + 0x20)
+local herosList = readQword(worldData + 0x50)
+local itemsPtr = readQword(herosList + 0x10)
+local hero = readQword(itemsPtr + 0x20)
+if not hero or hero == 0 then error("Hero not found") end
+local curPt = readFloat(hero + 0x35C)
+local input = InputQuery("Talent Points", "Current: " .. string.format("%.0f", curPt) .. ". Enter new value:", "10")
+if input then
+  local val = tonumber(input) or 10
+  writeFloat(hero + 0x35C, val * 1.0)
+  print(string.format("[TalentPt] Set to %.0f", val))
+end
+{$asm}
+
+[DISABLE]
+{$lua}
+if syntaxcheck then return end
+print("[TalentPt] (value remains as set)")
+{$asm}
+              </AssemblerScript>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+
+        <CheatEntry>
+          <ID>30</ID>
+          <Description>"--- Skills ---"</Description>
+          <GroupHeader>1</GroupHeader>
+          <Color>008000</Color>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>800</ID>
+              <Description>"Max Skill Learn Limits (all tiers -> 99)"</Description>
+              <Color>000000</Color>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript>
+[ENABLE]
+{$lua}
+if syntaxcheck then return end
+LaunchMonoDataCollector()
+local gdId = mono_findClass("", "GlobalData")
+if not gdId or gdId == 0 then error("GlobalData not found") end
+local fields = mono_class_enumFields(gdId)
+local maxSkillNumField = nil
+for _, f in ipairs(fields) do
+  if f.name == "MaxSkillNum" then maxSkillNumField = f break end
+end
+if not maxSkillNumField then error("MaxSkillNum not found") end
+local listPtr = mono_class_getStaticFieldValue(gdId, maxSkillNumField.field)
+if not listPtr or listPtr == 0 then error("MaxSkillNum list not found") end
+local count = readInteger(listPtr + 0x18)
+local items = readQword(listPtr + 0x10)
+skillLimitOrig = {}
+for i = 0, count - 1 do
+  skillLimitOrig[i] = readFloat(items + 0x20 + i * 4)
+  writeFloat(items + 0x20 + i * 4, 99.0)
+end
+print(string.format("[SkillLimit] All %d tiers set to 99", count))
+{$asm}
+
+[DISABLE]
+{$lua}
+if syntaxcheck then return end
+if skillLimitOrig then
+  local gdId = mono_findClass("", "GlobalData")
+  local fields = mono_class_enumFields(gdId)
+  for _, f in ipairs(fields) do
+    if f.name == "MaxSkillNum" then
+      local listPtr = mono_class_getStaticFieldValue(gdId, f.field)
+      local items = readQword(listPtr + 0x10)
+      for i, v in pairs(skillLimitOrig) do
+        writeFloat(items + 0x20 + i * 4, v)
+      end
+      break
+    end
+  end
+  print("[SkillLimit] Restored original limits")
+  skillLimitOrig = nil
+end
+{$asm}
+              </AssemblerScript>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>400</ID>
+              <Description>"WuXueTianCai Buff - Combat Skill EXP Rate (default 30%)"</Description>
+              <Color>000000</Color>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript>
+[ENABLE]
+{$lua}
+if syntaxcheck then return end
+LaunchMonoDataCollector()
+local gdcId = mono_findClass("", "GameDataController")
+if not gdcId or gdcId == 0 then error("GameDataController not found") end
+local fields = mono_class_enumFields(gdcId)
+local gdcInstance = nil
+for _, f in ipairs(fields) do
+  if f.name == "_instance" then
+    gdcInstance = mono_class_getStaticFieldValue(gdcId, f.field)
+    break
+  end
+end
+if not gdcInstance or gdcInstance == 0 then error("GDC instance not found") end
+local tagDataBase = readQword(gdcInstance + 0x190)
+local tagItems = readQword(tagDataBase + 0x10)
+local tag222 = readQword(tagItems + 0x20 + 222 * 8)
+local buffData = readQword(tag222 + 0x50)
+local dict = readQword(buffData + 0x10)
+local entries = readQword(dict + 0x18)
+local count = readInteger(dict + 0x20)
+talentBuffAddrs = {}
+for i = 0, count - 1 do
+  local base = entries + 0x20 + i * 16
+  local key = readInteger(base + 8)
+  if key == 176 then talentBuffAddrs.fight = base + 12 end
+  if key == 177 then talentBuffAddrs.book = base + 12 end
+end
+local curFight = readFloat(talentBuffAddrs.fight or 0) or 0
+local curBook = readFloat(talentBuffAddrs.book or 0) or 0
+talentBuffOrigFight = curFight
+talentBuffOrigBook = curBook
+local input = InputQuery("WuXueTianCai Buff", "Current: FightExp=" .. string.format("%.0f%%", curFight*100) .. " BookExp=" .. string.format("%.0f%%", curBook*100) .. ". Enter new % (e.g. 300 for 300%):", "300")
+if input then
+  local pct = tonumber(input) or 300
+  local newVal = pct / 100.0
+  if talentBuffAddrs.fight then writeFloat(talentBuffAddrs.fight, newVal) end
+  if talentBuffAddrs.book then writeFloat(talentBuffAddrs.book, newVal) end
+  print(string.format("[WuXueTianCai] Set fight=%.0f%% book=%.0f%%", pct, pct))
+end
+{$asm}
+
+[DISABLE]
+{$lua}
+if syntaxcheck then return end
+if talentBuffAddrs then
+  if talentBuffAddrs.fight and talentBuffOrigFight then writeFloat(talentBuffAddrs.fight, talentBuffOrigFight) end
+  if talentBuffAddrs.book and talentBuffOrigBook then writeFloat(talentBuffAddrs.book, talentBuffOrigBook) end
+  print("[WuXueTianCai] Restored original values")
+  talentBuffAddrs = nil
+end
+{$asm}
+              </AssemblerScript>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>401</ID>
+              <Description>"BoXueDuoCai Buff - Non-Combat Skill EXP Rate (default 30%)"</Description>
+              <Color>000000</Color>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript>
+[ENABLE]
+{$lua}
+if syntaxcheck then return end
+LaunchMonoDataCollector()
+local gdcId = mono_findClass("", "GameDataController")
+if not gdcId or gdcId == 0 then error("GameDataController not found") end
+local fields = mono_class_enumFields(gdcId)
+local gdcInstance = nil
+for _, f in ipairs(fields) do
+  if f.name == "_instance" then
+    gdcInstance = mono_class_getStaticFieldValue(gdcId, f.field)
+    break
+  end
+end
+if not gdcInstance or gdcInstance == 0 then error("GDC instance not found") end
+local tagDataBase = readQword(gdcInstance + 0x190)
+local tagItems = readQword(tagDataBase + 0x10)
+local tag243 = readQword(tagItems + 0x20 + 243 * 8)
+local buffData = readQword(tag243 + 0x50)
+local dict = readQword(buffData + 0x10)
+local entries = readQword(dict + 0x18)
+local count = readInteger(dict + 0x20)
+livingBuffAddr = nil
+for i = 0, count - 1 do
+  local base = entries + 0x20 + i * 16
+  local key = readInteger(base + 8)
+  if key == 178 then livingBuffAddr = base + 12 end
+end
+local curVal = readFloat(livingBuffAddr or 0) or 0
+livingBuffOrigVal = curVal
+local input = InputQuery("BoXueDuoCai Buff", "Current: LivingSkillExp=" .. string.format("%.0f%%", curVal*100) .. ". Enter new % (e.g. 300 for 300%):", "300")
+if input then
+  local pct = tonumber(input) or 300
+  local newVal = pct / 100.0
+  if livingBuffAddr then writeFloat(livingBuffAddr, newVal) end
+  print(string.format("[BoXueDuoCai] Set LivingSkillExp=%.0f%%", pct))
+end
+{$asm}
+
+[DISABLE]
+{$lua}
+if syntaxcheck then return end
+if livingBuffAddr and livingBuffOrigVal then
+  writeFloat(livingBuffAddr, livingBuffOrigVal)
+  print("[BoXueDuoCai] Restored original value")
+  livingBuffAddr = nil
+  livingBuffOrigVal = nil
+end
+{$asm}
+              </AssemblerScript>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+
+        <CheatEntry>
+          <ID>40</ID>
+          <Description>"--- Stats ---"</Description>
+          <GroupHeader>1</GroupHeader>
+          <Color>008000</Color>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>200</ID>
+              <Description>"Stat Cap Boost (raises all skill/attribute caps)"</Description>
+              <Color>000000</Color>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript>
+[ENABLE]
+{$lua}
+if syntaxcheck then return end
+LaunchMonoDataCollector()
+statCapValue = statCapValue or 99.0
+
+function findPlayerHero()
+  local gcId = mono_findClass("", "GameController")
+  if not gcId or gcId == 0 then return nil end
+  local fields = mono_class_enumFields(gcId)
+  local gcInstance = nil
+  for _, f in ipairs(fields) do
+    if f.name == "_instance" then
+      gcInstance = mono_class_getStaticFieldValue(gcId, f.field)
+      break
+    end
+  end
+  if not gcInstance or gcInstance == 0 then return nil end
+  local worldData = readQword(gcInstance + 0x20)
+  if not worldData or worldData == 0 then return nil end
+  local herosList = readQword(worldData + 0x50)
+  if not herosList or herosList == 0 then return nil end
+  local itemsPtr = readQword(herosList + 0x10)
+  if not itemsPtr or itemsPtr == 0 then return nil end
+  local hero = readQword(itemsPtr + 0x20)
+  if hero and hero ~= 0 then return hero end
+  return nil
+end
+
+function boostStatCaps(hero, capValue)
+  if not hero or hero == 0 then return end
+  local lists = {0x130, 0x148, 0x160}
+  for _, offset in ipairs(lists) do
+    local listPtr = readQword(hero + offset)
+    if listPtr and listPtr ~= 0 then
+      local count = readInteger(listPtr + 0x18)
+      local items = readQword(listPtr + 0x10)
+      if items and items ~= 0 and count then
+        for j = 0, count - 1 do
+          local cur = readFloat(items + 0x20 + j * 4)
+          if cur and capValue > cur then
+            writeFloat(items + 0x20 + j * 4, capValue)
+          end
+        end
+      end
+    end
+  end
+end
+
+statCapTimer = createTimer(nil)
+statCapTimer.Interval = 3000
+statCapTimer.OnTimer = function(t)
+  local ok, err = pcall(function()
+    local hero = findPlayerHero()
+    if hero then boostStatCaps(hero, statCapValue) end
+  end)
+  if not ok then
+    print("[StatCap] Timer error: " .. tostring(err))
+  end
+end
+statCapTimer.Enabled = true
+
+local hero = findPlayerHero()
+if hero then
+  boostStatCaps(hero, statCapValue)
+  print("[StatCap] Boosted all stat caps to " .. statCapValue)
+else
+  print("[StatCap] WARNING: Could not find player hero yet (timer will retry)")
+end
+{$asm}
+
+[DISABLE]
+{$lua}
+if syntaxcheck then return end
+if statCapTimer then
+  statCapTimer.Enabled = false
+  statCapTimer.destroy()
+  statCapTimer = nil
+  print("[StatCap] Disabled")
+end
+{$asm}
+              </AssemblerScript>
+              <CheatEntries>
+                <CheatEntry>
+                  <ID>201</ID>
+                  <Description>"Change Cap Value (default 99)"</Description>
+                  <LastState Value="99" RealAddress="00000000"/>
+                  <ShowAsHex>0</ShowAsHex>
+                  <Color>000000</Color>
+                  <VariableType>Auto Assembler Script</VariableType>
+                  <AssemblerScript>
+{$lua}
+if syntaxcheck then return end
+local val = InputQuery("Stat Cap Value", "Enter new stat cap (e.g. 999, 500, 200):", tostring(statCapValue or 99))
+if val then
+  statCapValue = tonumber(val) or 99.0
+  print("[StatCap] Cap value set to: " .. statCapValue)
+  if statCapTimer and statCapTimer.Enabled then
+    local hero = findPlayerHero()
+    if hero then boostStatCaps(hero, statCapValue) end
+  end
+end
+                  </AssemblerScript>
+                </CheatEntry>
+              </CheatEntries>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+
+      </CheatEntries>
+    </CheatEntry>
+  </CheatEntries>
+</CheatTable>

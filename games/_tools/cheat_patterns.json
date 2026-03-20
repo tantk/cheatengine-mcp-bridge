@@ -1,0 +1,83 @@
+{
+  "categories": {
+    "health": {
+      "keywords": ["hp", "health", "life", "hitpoint"],
+      "max_keywords": ["maxhp", "maxhealth", "maxlife", "hpmax", "healthmax"],
+      "types": ["float", "Single", "int", "Int32"],
+      "weight": 10,
+      "description": "Health Points"
+    },
+    "mana": {
+      "keywords": ["mana", "mp", "energy", "stamina", "qi", "neili", "innerforce"],
+      "max_keywords": ["maxmana", "maxmp", "maxenergy", "manamax", "mpmax"],
+      "types": ["float", "Single", "int", "Int32"],
+      "weight": 9,
+      "description": "Mana/Energy"
+    },
+    "currency": {
+      "keywords": ["money", "gold", "silver", "coin", "currency", "diamond", "gem", "crystal", "cash"],
+      "types": ["int", "Int32", "Int64", "float", "Single"],
+      "weight": 10,
+      "description": "Currency/Money"
+    },
+    "experience": {
+      "keywords": ["exp", "experience", "xp"],
+      "types": ["int", "Int32", "float", "Single"],
+      "weight": 7,
+      "description": "Experience Points"
+    },
+    "level": {
+      "keywords": ["level", "lvl", "lv", "grade", "rank"],
+      "types": ["int", "Int32"],
+      "weight": 6,
+      "description": "Level"
+    },
+    "attack": {
+      "keywords": ["damage", "attack", "atk", "attackpower", "strength", "str", "power"],
+      "types": ["float", "Single", "int", "Int32"],
+      "weight": 8,
+      "description": "Attack/Damage"
+    },
+    "defense": {
+      "keywords": ["defense", "def", "armour", "armor", "resist", "resistance", "protection"],
+      "types": ["float", "Single", "int", "Int32"],
+      "weight": 7,
+      "description": "Defense/Armor"
+    },
+    "speed": {
+      "keywords": ["speed", "movespeed", "movementspeed", "velocity", "agility", "agi", "dex", "dexterity"],
+      "types": ["float", "Single"],
+      "weight": 6,
+      "description": "Speed/Agility"
+    },
+    "combat": {
+      "keywords": ["critrate", "critdamage", "critchance", "attackspeed", "cooldown", "accuracy", "evasion", "dodge"],
+      "types": ["float", "Single"],
+      "weight": 5,
+      "description": "Combat Stats"
+    },
+    "inventory": {
+      "keywords": ["inventory", "itemlist", "allitem", "backpack", "bag", "storage", "weight", "maxweight", "carryweight"],
+      "types": ["float", "Single", "int", "Int32"],
+      "weight": 6,
+      "description": "Inventory"
+    },
+    "reputation": {
+      "keywords": ["fame", "reputation", "karma", "favor", "favorability", "honor", "renown", "prestige"],
+      "types": ["float", "Single", "int", "Int32"],
+      "weight": 5,
+      "description": "Reputation/Fame"
+    },
+    "skill": {
+      "keywords": ["skillpoint", "talentpoint", "abilitypoint", "statpoint", "attributepoint", "perkpoint"],
+      "types": ["int", "Int32", "float", "Single"],
+      "weight": 7,
+      "description": "Skill/Talent Points"
+    }
+  },
+  "singleton_patterns": ["_instance", "Instance", "instance", "s_Instance", "singleton", "Singleton"],
+  "player_class_hints": ["Player", "Hero", "Character", "PlayerData", "HeroData", "CharacterData", "PlayerController", "MainCharacter", "Protagonist", "Avatar"],
+  "manager_class_hints": ["GameController", "GameManager", "GameData", "WorldManager", "WorldData", "SaveData", "DataManager", "GameDataController"],
+  "ignore_classes": ["UnityEngine", "System.", "TMPro", "NGUI", "UI", "Editor"],
+  "ignore_fields": ["__", "m_", "s_", "<>"]
+}

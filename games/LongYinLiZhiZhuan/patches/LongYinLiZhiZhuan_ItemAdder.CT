@@ -1,0 +1,515 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CheatTable>
+  <CheatTableName>LongYinLiZhiZhuan Item Adder</CheatTableName>
+  <CheatEntries>
+    <CheatEntry>
+      <ID>0</ID>
+      <Description>"Item Adder - GUI opens on table load"</Description>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+{$lua}
+if openItemAdder then openItemAdder() end
+{$asm}
+[DISABLE]
+</AssemblerScript>
+    </CheatEntry>
+  </CheatEntries>
+  <LuaScript><![CDATA[
+--[[
+  LongYinLiZhiZhuan Item Adder v2
+  Tick the checkbox in the cheat table to open the GUI.
+  Or this script auto-runs on table load.
+]]
+
+-- ItemAdder.lua content embedded below
+local skillDB = {
+  {279,"元始天功 内功"},{280,"飘飘欲仙 轻功"},{281,"虎啸龙吟 绝技"},
+  {282,"照影神拳 拳掌"},{283,"诛仙剑法 剑法"},{284,"九州风雷刀 刀法"},
+  {285,"大闹天宫棍 长兵"},{286,"碧海潮生曲 奇门"},{287,"多情飞刀 射术"},
+  {317,"醉梦鱼龙舞 轻功"},{318,"净乐琉璃刀 刀法"},
+  {352,"漫天花雨 绝技"},{353,"九天罗候针 射术"},
+  {383,"黄帝秘经 内功"},{384,"灵犀一指 拳掌"},
+  {419,"降龙掌法 拳掌"},{420,"打狗八绝棍 长兵"},
+  {455,"帝王封禅功 绝技"},{456,"惊鸿一点枪 长兵"},
+  {495,"遁甲天书 绝技"},{496,"天劫九重 奇门"},
+  {526,"无尽剑意 剑法"},{566,"蚩尤鬼降 轻功"},
+  {567,"万毒宝典 绝技"},{568,"金蚕王蛊 射术"},
+  {604,"万恶魔功 内功"},{605,"血脉逆行 绝技"},{606,"杀人刀法 刀法"},
+  {644,"归墟秘典 内功"},{645,"天人感应步 轻功"},{646,"轮回不灭法 绝技"},
+  {689,"易筋经 内功"},{690,"洗髓经 内功"},
+  {691,"金刚不坏神功 绝技"},{692,"达摩神杖 长兵"},
+  {729,"太极神功 内功"},{730,"道德真经 绝技"},{731,"太极剑道 剑法"},
+  {760,"霸刀一式 刀法"},{792,"敲爻歌诀 内功"},{793,"天遁剑法 剑法"},
+  {825,"三洞灵宝经 内功"},{826,"诸天化身步 轻功"},
+  {857,"斗转星移 绝技"},{887,"武库战车 轻功"},{888,"公输遗匣 奇门"},
+  {917,"灭世天雷 射术"},{952,"大日如来功 内功"},
+  {953,"龙象护法功 绝技"},{954,"因陀罗杵 奇门"},
+  {989,"不老长春功 内功"},{990,"仙娥折梅 轻功"},
+  {991,"白虹贯日掌 拳掌"},{992,"逆转周天大法 绝技"},
+  {994,"心狂归藏功 内功"},{995,"龙胤归藏功 内功"},
+}
+local medDB = {
+  {5,"万灵回生散 HP G5"},{11,"紫霄玄关散 MP G5"},{17,"九转还魂丹 Full G5"},
+  {23,"天香断续散 Injury G5"},{29,"还阳正气丹 Meridian G5"},
+  {4,"玉洞黑石丹 HP G4"},{10,"济生养气丸 MP G4"},{16,"生生造化丹 Full G4"},
+  {22,"血府逐瘀散 Injury G4"},{28,"三黄宝腊丹 Meridian G4"},
+  {3,"人参养荣丸 HP G3"},{9,"参苓白术散 MP G3"},{15,"天王补心丹 Full G3"},
+}
+local foodDB = {
+  {5,"十全大补汤 Soup G5"},{11,"龙脑酒 Wine G5"},{17,"乳猪 Meat G5"},
+  {23,"杜康酒 Wine G5"},{29,"烩八珍 Soup G5"},
+  {4,"参茸熊掌 Soup G4"},{10,"虎骨酒 Wine G4"},{16,"红烧肉 Meat G4"},
+  {22,"新丰酒 Wine G4"},{28,"四君子汤 Soup G4"},
+  {3,"沙苑甲鱼汤 Soup G3"},{9,"鹿胎酒 Wine G3"},{15,"烧鸡 Meat G3"},
+}
+local horseDB = {
+  {45,"神凫马 spd=95 G5"},{41,"赤兔马 spd=90 G5"},{43,"绝影马 spd=85 G5"},
+  {40,"汗血马 spd=80 G5"},{42,"的卢马 spd=75 G5"},{47,"白龙驹 spd=70 G5"},
+  {36,"斑豹马 spd=80 G4"},{35,"拳毛驹 spd=75 G4"},{33,"白蹄乌 spd=70 G4"},
+}
+local matDB = {
+  {0,"Wood"},{1,"Ore"},{2,"Medicine"},{3,"Food Ingredient"},{4,"Poison"},
+}
+-- AOB signatures to find methods dynamically (survives game updates)
+local AOB_SIGS = {
+  setBook   = {sig="48 8B 43 68 48 85 C0 0F 84 ?? ?? ?? ?? 89 78 10", off=0x3F},
+  setMat    = {sig="89 6B 18 89 73 3C 89 7B 40", off=0x48},
+  ctor      = {sig="C7 47 44 00 00 80 3F 48 8B CF E8 ?? ?? ?? ?? 89 5F 14 83 FB 06", off=0x6A},
+  ildCtor   = {sig="33 D2 48 C7 47 10 FF FF FF FF 48 8B CF C7 47 20", off=0x5E},
+  mergeList = {sig="48 85 ED 74 ?? 48 89 5C 24 30 48 89 74 24 38 48 89 7C 24 40 33 FF 8D 77 20", off=0x39},
+}
+-- Fallback RVAs (current version, used if AOB fails)
+local RVA_FALLBACK = {
+  ctor = 0xCDE970, setBook = 0xCDDD10, setMat = 0xCDDE20,
+  ildCtor = 0xCE6310, mergeList = 0xCE5880,
+}
+local RVA = {} -- filled during discover
+local S = {}
+local WK = { code = nil, data = nil, str = nil }
+
+local function allocWorkArea()
+  if WK.code then return true end
+  local ok = autoAssemble([[
+alloc(wkCode, 512)
+alloc(wkData, 512)
+alloc(wkStr, 64)
+registersymbol(wkCode)
+registersymbol(wkData)
+registersymbol(wkStr)
+wkStr:
+db 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+db 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+wkData:
+dq 0
+dq 0
+dq 0
+dq 0
+dq 0
+dq 0
+dq 0
+dq 0
+wkCode:
+ret
+  ]])
+  if not ok then return false end
+  WK.code = getAddress("wkCode")
+  WK.data = getAddress("wkData")
+  WK.str = getAddress("wkStr")
+  return true
+end
+
+local function shellExec(bytesFunc)
+  local p = 0
+  local function w(b) writeBytes(WK.code + p, b); p = p + #b end
+  local function q(a) writeQword(WK.code + p, a); p = p + 8 end
+  local function d(v) writeInteger(WK.code + p, v); p = p + 4 end
+  bytesFunc(w, q, d)
+  createRemoteThread(WK.code)
+end
+
+local function discover()
+  S = {}
+  S.base = getAddress("GameAssembly.dll")
+  if not S.base or S.base == 0 or not readBytes(S.base, 2) then
+    return false, "GameAssembly.dll not loaded"
+  end
+  S.objNew = getAddress("GameAssembly.il2cpp_object_new")
+
+  -- Find methods via AOB (update-proof), fallback to RVAs
+  for name, info in pairs(AOB_SIGS) do
+    local r = AOBScan(info.sig, "+X")
+    if r and stringlist_getCount(r) >= 1 then
+      local addr = tonumber(stringlist_getString(r, 0), 16) - info.off
+      RVA[name] = addr - S.base
+      object_destroy(r)
+    elseif RVA_FALLBACK[name] then
+      RVA[name] = RVA_FALLBACK[name]
+    end
+  end
+  if not RVA.ctor or not RVA.setBook or not RVA.mergeList or not RVA.ildCtor then
+    return false, "Could not find game methods (AOB scan failed)"
+  end
+
+  local domainGet = getAddress("GameAssembly.il2cpp_domain_get")
+  local domainGetAsm = getAddress("GameAssembly.il2cpp_domain_get_assemblies")
+  local imageFromAsm = getAddress("GameAssembly.il2cpp_assembly_get_image")
+  local classFromName = getAddress("GameAssembly.il2cpp_class_from_name")
+  local getStaticData = getAddress("GameAssembly.il2cpp_class_get_static_field_data")
+  if not S.objNew or S.objNew == 0 then return false, "il2cpp exports missing" end
+  if not allocWorkArea() then return false, "Work area alloc failed" end
+
+  shellExec(function(w, q)
+    w({0x48,0x83,0xEC,0x38})
+    w({0x48,0xB8}); q(domainGet); w({0xFF,0xD0})
+    w({0x48,0x8B,0xC8}); w({0x48,0x8D,0x54,0x24,0x20})
+    w({0x48,0xB8}); q(domainGetAsm); w({0xFF,0xD0})
+    w({0x48,0xA3}); q(WK.data)
+    w({0x8B,0x44,0x24,0x20}); w({0x48,0xA3}); q(WK.data + 8)
+    w({0x48,0x83,0xC4,0x38}); w({0xC3})
+  end)
+  sleep(300)
+  local asmArr = readQword(WK.data)
+  local asmCnt = readQword(WK.data + 8)
+  if not asmArr or asmArr == 0 then return false, "No assemblies" end
+
+  local nsA = WK.str
+  local nmA = WK.str + 8
+  writeBytes(nsA, {0x00})
+
+  local function findClass(name)
+    local b = {}
+    for i = 1, #name do b[i] = string.byte(name, i) end
+    b[#b + 1] = 0
+    writeBytes(nmA, b)
+    for i = 0, asmCnt - 1 do
+      local ap = readQword(asmArr + i * 8)
+      if ap and ap ~= 0 then
+        shellExec(function(w, q)
+          w({0x48,0x83,0xEC,0x28})
+          w({0x48,0xB9}); q(ap); w({0x48,0xB8}); q(imageFromAsm); w({0xFF,0xD0})
+          w({0x48,0x8B,0xC8}); w({0x48,0xBA}); q(nsA); w({0x49,0xB8}); q(nmA)
+          w({0x48,0xB8}); q(classFromName); w({0xFF,0xD0})
+          w({0x48,0xA3}); q(WK.data + 0x10)
+          w({0x48,0x83,0xC4,0x28}); w({0xC3})
+        end)
+        writeQword(WK.data + 0x10, 0)
+        createRemoteThread(WK.code)
+        sleep(30)
+        local cls = readQword(WK.data + 0x10)
+        if cls and cls ~= 0 then return cls end
+      end
+    end
+    return nil
+  end
+
+  local gcClass = findClass("GameController")
+  if not gcClass then return false, "GameController not found" end
+  local gdcClass = findClass("GameDataController")
+
+  shellExec(function(w, q)
+    w({0x48,0x83,0xEC,0x28})
+    w({0x48,0xB9}); q(gcClass); w({0x48,0xB8}); q(getStaticData); w({0xFF,0xD0})
+    w({0x48,0xA3}); q(WK.data + 0x20)
+    if gdcClass then
+      w({0x48,0xB9}); q(gdcClass); w({0x48,0xB8}); q(getStaticData); w({0xFF,0xD0})
+      w({0x48,0xA3}); q(WK.data + 0x28)
+    end
+    w({0x48,0x83,0xC4,0x28}); w({0xC3})
+  end)
+  sleep(200)
+
+  local gc = readQword(readQword(WK.data + 0x20))
+  if not gc or gc == 0 then return false, "GC._instance null" end
+  if gdcClass then
+    local gdcStatic = readQword(WK.data + 0x28)
+    if gdcStatic and gdcStatic ~= 0 then S.gdc = readQword(gdcStatic + 0x20) end
+  end
+
+  local wd = readQword(gc + 0x20)
+  if not wd or wd == 0 then return false, "WorldData null" end
+  local ph = readQword(readQword(readQword(wd + 0x50) + 0x10) + 0x20)
+  S.ild = readQword(ph + 0x220)
+  S.ildKlass = readQword(S.ild)
+  local ail = readQword(S.ild + 0x28)
+  local ia = readQword(ail + 0x10)
+  local ic = readInteger(ail + 0x18)
+
+  for i = 0, ic - 1 do
+    local it = readQword(ia + 0x20 + i * 8)
+    if it and it ~= 0 then
+      if not S.itemKlass then S.itemKlass = readQword(it) end
+      local tp = readInteger(it + 0x14)
+      if tp == 6 and not S.hdKlass then
+        local hd = readQword(it + 0x80)
+        if hd and hd ~= 0 then S.hdKlass = readQword(hd) end
+      end
+      if (tp == 1 or tp == 2) and not S.mfdKlass then
+        local mfd = readQword(it + 0x60)
+        if mfd and mfd ~= 0 then S.mfdKlass = readQword(mfd) end
+      end
+    end
+  end
+  if not S.itemKlass then return false, "No items in inventory" end
+  S.ready = true
+  return true, string.format("OK! %d items. GDC:%s", ic, S.gdc and "Y" or "N")
+end
+
+local function allocItem()
+  writeQword(WK.data, 0)
+  shellExec(function(w, q)
+    w({0x48,0x83,0xEC,0x28})
+    w({0x48,0xB9}); q(S.itemKlass)
+    w({0x48,0xB8}); q(S.objNew); w({0xFF,0xD0})
+    w({0x48,0xA3}); q(WK.data)
+    w({0x48,0x83,0xC4,0x28}); w({0xC3})
+  end)
+  sleep(300)
+  return readQword(WK.data)
+end
+
+local function allocSubObj(klass)
+  writeQword(WK.data + 8, 0)
+  shellExec(function(w, q)
+    w({0x48,0x83,0xEC,0x28})
+    w({0x48,0xB9}); q(klass)
+    w({0x48,0xB8}); q(S.objNew); w({0xFF,0xD0})
+    w({0x48,0xA3}); q(WK.data + 8)
+    w({0x48,0x83,0xC4,0x28}); w({0xC3})
+  end)
+  sleep(300)
+  return readQword(WK.data + 8)
+end
+
+local function callFunc(thisPtr, funcRVA, arg1, arg2, arg3)
+  shellExec(function(w, q, d)
+    w({0x48,0x83,0xEC,0x28})
+    w({0x48,0xB9}); q(thisPtr)
+    if arg1 then w({0xBA}); d(arg1) else w({0x33,0xD2}) end
+    if arg2 then w({0x41,0xB8}); d(arg2) else w({0x45,0x33,0xC0}) end
+    if arg3 then w({0x41,0xB9}); d(arg3) else w({0x4D,0x31,0xC9}) end
+    w({0x48,0xB8}); q(S.base + funcRVA); w({0xFF,0xD0})
+    w({0x48,0x83,0xC4,0x28}); w({0xC3})
+  end)
+  sleep(300)
+end
+
+local function mergeIntoInventory(itemPtr)
+  writeQword(WK.data + 0x10, 0)
+  shellExec(function(w, q)
+    w({0x48,0x83,0xEC,0x28})
+    w({0x48,0xB9}); q(S.ildKlass); w({0x48,0xB8}); q(S.objNew); w({0xFF,0xD0})
+    w({0x48,0x85,0xC0}); w({0x74,0x35})
+    w({0x48,0xA3}); q(WK.data + 0x10)
+    w({0x48,0x8B,0xC8}); w({0x33,0xD2})
+    w({0x48,0xB8}); q(S.base + RVA.ildCtor); w({0xFF,0xD0})
+    w({0x48,0xA1}); q(WK.data + 0x10)
+    w({0x48,0x8B,0x48,0x28}); w({0x48,0x8B,0x51,0x10})
+    w({0x48,0xB8}); q(itemPtr)
+    w({0x48,0x89,0x42,0x20})
+    w({0xC7,0x41,0x18,0x01,0x00,0x00,0x00})
+    w({0x48,0xB9}); q(S.ild)
+    w({0x48,0xA1}); q(WK.data + 0x10)
+    w({0x48,0x8B,0xD0}); w({0x45,0x33,0xC0})
+    w({0x48,0xB8}); q(S.base + RVA.mergeList); w({0xFF,0xD0})
+    w({0x48,0x83,0xC4,0x28}); w({0xC3})
+  end)
+  sleep(400)
+end
+
+local function getItemName(ptr)
+  local np = readQword(ptr + 0x20)
+  if not np or np == 0 then return "?" end
+  local nl = readInteger(np + 0x10)
+  if not nl or nl <= 0 or nl > 200 then return "?" end
+  return readString(np + 0x14, nl * 2, true) or "?"
+end
+
+local function copyItemFromDB(ni, subObj, subOffset, dbOffset, dbIndex, subSize)
+  local dbList = readQword(S.gdc + dbOffset)
+  local dbArr = readQword(dbList + 0x10)
+  local src = readQword(dbArr + 0x20 + dbIndex * 8)
+  if not src or src == 0 then return false end
+  writeInteger(ni + 0x10, readInteger(src + 0x10))
+  writeInteger(ni + 0x14, readInteger(src + 0x14))
+  writeInteger(ni + 0x18, readInteger(src + 0x18))
+  writeQword(ni + 0x20, readQword(src + 0x20))
+  writeQword(ni + 0x28, readQword(src + 0x28))
+  writeQword(ni + 0x30, readQword(src + 0x30))
+  writeInteger(ni + 0x38, readInteger(src + 0x38))
+  writeInteger(ni + 0x3C, readInteger(src + 0x3C))
+  writeInteger(ni + 0x40, readInteger(src + 0x40))
+  writeFloat(ni + 0x44, readFloat(src + 0x44))
+  if subObj and subOffset then
+    local srcSub = readQword(src + subOffset)
+    if srcSub and srcSub ~= 0 then
+      for off = 0x10, subSize, 4 do
+        writeInteger(subObj + off, readInteger(srcSub + off))
+      end
+    end
+  end
+  return true
+end
+
+local function addBook(skillID, rareLv)
+  if not S.ready then return false, "Connect first" end
+  local ni = allocItem()
+  if not ni or ni == 0 then return false, "alloc fail" end
+  callFunc(ni, RVA.ctor, 3)
+  callFunc(ni, RVA.setBook, skillID, rareLv)
+  mergeIntoInventory(ni)
+  return true, getItemName(ni)
+end
+
+local function addMaterial(subType, itemLv, rareLv)
+  if not S.ready then return false, "Connect first" end
+  local ni = allocItem()
+  if not ni or ni == 0 then return false, "alloc fail" end
+  callFunc(ni, RVA.ctor, 5)
+  callFunc(ni, RVA.setMat, subType, itemLv, rareLv)
+  mergeIntoInventory(ni)
+  return true, getItemName(ni)
+end
+
+local function addMedFood(dbIndex, dbOffset)
+  if not S.ready then return false, "Connect first" end
+  if not S.gdc then return false, "No GameDataController" end
+  if not S.mfdKlass then return false, "No MedFoodData klass" end
+  local ni = allocItem()
+  if not ni or ni == 0 then return false, "alloc item fail" end
+  local mfd = allocSubObj(S.mfdKlass)
+  if not mfd or mfd == 0 then return false, "alloc mfd fail" end
+  writeQword(ni + 0x60, mfd)
+  if not copyItemFromDB(ni, mfd, 0x60, dbOffset, dbIndex, 0x28) then return false, "DB copy fail" end
+  mergeIntoInventory(ni)
+  return true, getItemName(ni)
+end
+
+local function addHorse(dbIndex)
+  if not S.ready then return false, "Connect first" end
+  if not S.gdc then return false, "No GameDataController" end
+  if not S.hdKlass then return false, "No HorseData klass" end
+  local ni = allocItem()
+  if not ni or ni == 0 then return false, "alloc item fail" end
+  local hd = allocSubObj(S.hdKlass)
+  if not hd or hd == 0 then return false, "alloc hd fail" end
+  writeQword(ni + 0x80, hd)
+  if not copyItemFromDB(ni, hd, 0x80, 0x120, dbIndex, 0x44) then return false, "DB copy fail" end
+  writeFloat(hd + 0x38, readFloat(hd + 0x18))
+  writeFloat(hd + 0x3C, 1.0)
+  mergeIntoInventory(ni)
+  return true, getItemName(ni)
+end
+
+-- GUI
+function openItemAdder()
+  if _itemAdderForm then _itemAdderForm.destroy() end
+  local frm = createForm(false)
+  _itemAdderForm = frm
+  frm.Caption = "LongYinLiZhiZhuan Item Adder v2"
+  frm.Width = 520; frm.Height = 480
+  frm.Position = "poScreenCenter"; frm.BorderStyle = "bsSingle"
+
+  local Y = 10
+  local lblStatus = createLabel(frm)
+  lblStatus.Left = 10; lblStatus.Top = 445; lblStatus.Width = 500
+  lblStatus.Caption = "Click Connect first"; lblStatus.Font.Color = 0x808080
+  local function setStatus(msg, color) lblStatus.Caption = msg; lblStatus.Font.Color = color or 0 end
+
+  local btnConn = createButton(frm)
+  btnConn.Left = 10; btnConn.Top = Y; btnConn.Width = 130; btnConn.Height = 28
+  btnConn.Caption = "Connect to Game"
+  btnConn.OnClick = function()
+    setStatus("Connecting...", 0x008080)
+    local ok, msg = discover()
+    setStatus(ok and msg or ("ERR: " .. msg), ok and 0x008000 or 0x0000FF)
+  end
+  Y = Y + 38
+
+  -- BOOK
+  local lbl = createLabel(frm); lbl.Left = 10; lbl.Top = Y; lbl.Caption = "Martial Arts Book (G5)"
+  lbl.Font.Size = 9; lbl.Font.Style = "fsBold"; Y = Y + 20
+  local cmbSk = createComboBox(frm); cmbSk.Left = 10; cmbSk.Top = Y; cmbSk.Width = 320
+  for _, s in ipairs(skillDB) do cmbSk.Items.add(string.format("[%d] %s", s[1], s[2])) end
+  cmbSk.ItemIndex = 0
+  local edtID = createEdit(frm); edtID.Left = 340; edtID.Top = Y; edtID.Width = 50; edtID.Text = ""; edtID.Hint = "ID 0-999"; edtID.ShowHint = true
+  local lblIDHint = createLabel(frm); lblIDHint.Left = 342; lblIDHint.Top = Y - 14; lblIDHint.Caption = "ID 0-999"; lblIDHint.Font.Size = 7; lblIDHint.Font.Color = 0x808080
+  local btnBook = createButton(frm); btnBook.Left = 400; btnBook.Top = Y - 2; btnBook.Width = 100; btnBook.Height = 24
+  btnBook.Caption = "Add Book"
+  btnBook.OnClick = function()
+    if not S.ready then setStatus("Connect first!", 0x0000FF); return end
+    local sid = edtID.Text ~= "" and tonumber(edtID.Text) or skillDB[cmbSk.ItemIndex + 1][1]
+    setStatus("Adding...", 0x008080)
+    local ok, msg = addBook(sid, 5)
+    setStatus(ok and ("Added: " .. msg) or ("ERR: " .. msg), ok and 0x008000 or 0x0000FF)
+  end
+  Y = Y + 32
+
+  -- MATERIAL
+  lbl = createLabel(frm); lbl.Left = 10; lbl.Top = Y; lbl.Caption = "Material"
+  lbl.Font.Size = 9; lbl.Font.Style = "fsBold"; Y = Y + 20
+  local cmbMT = createComboBox(frm); cmbMT.Left = 10; cmbMT.Top = Y; cmbMT.Width = 140
+  for _, m in ipairs(matDB) do cmbMT.Items.add(m[1] .. "-" .. m[2]) end; cmbMT.ItemIndex = 1
+  local lblML = createLabel(frm); lblML.Left = 160; lblML.Top = Y + 3; lblML.Caption = "Lv:"
+  local cmbML = createComboBox(frm); cmbML.Left = 180; cmbML.Top = Y; cmbML.Width = 35
+  for i = 0, 5 do cmbML.Items.add(tostring(i)) end; cmbML.ItemIndex = 5
+  local btnMat = createButton(frm); btnMat.Left = 400; btnMat.Top = Y - 2; btnMat.Width = 100; btnMat.Height = 24
+  btnMat.Caption = "Add Material"
+  btnMat.OnClick = function()
+    if not S.ready then setStatus("Connect first!", 0x0000FF); return end
+    setStatus("Adding...", 0x008080)
+    local ok, msg = addMaterial(cmbMT.ItemIndex, cmbML.ItemIndex, 5)
+    setStatus(ok and ("Added: " .. msg) or ("ERR: " .. msg), ok and 0x008000 or 0x0000FF)
+  end
+  Y = Y + 32
+
+  -- HORSE
+  lbl = createLabel(frm); lbl.Left = 10; lbl.Top = Y; lbl.Caption = "Horse"
+  lbl.Font.Size = 9; lbl.Font.Style = "fsBold"; Y = Y + 20
+  local cmbHr = createComboBox(frm); cmbHr.Left = 10; cmbHr.Top = Y; cmbHr.Width = 320
+  for _, h in ipairs(horseDB) do cmbHr.Items.add(string.format("[%d] %s", h[1], h[2])) end; cmbHr.ItemIndex = 0
+  local btnHr = createButton(frm); btnHr.Left = 400; btnHr.Top = Y - 2; btnHr.Width = 100; btnHr.Height = 24
+  btnHr.Caption = "Add Horse"
+  btnHr.OnClick = function()
+    if not S.ready then setStatus("Connect first!", 0x0000FF); return end
+    setStatus("Adding...", 0x008080)
+    local ok, msg = addHorse(horseDB[cmbHr.ItemIndex + 1][1])
+    setStatus(ok and ("Added: " .. msg) or ("ERR: " .. msg), ok and 0x008000 or 0x0000FF)
+  end
+  Y = Y + 32
+
+  -- MEDICINE
+  lbl = createLabel(frm); lbl.Left = 10; lbl.Top = Y; lbl.Caption = "Medicine (from Game DB)"
+  lbl.Font.Size = 9; lbl.Font.Style = "fsBold"; Y = Y + 20
+  local cmbMed = createComboBox(frm); cmbMed.Left = 10; cmbMed.Top = Y; cmbMed.Width = 320
+  for _, m in ipairs(medDB) do cmbMed.Items.add(string.format("[%d] %s", m[1], m[2])) end; cmbMed.ItemIndex = 0
+  local btnMed = createButton(frm); btnMed.Left = 400; btnMed.Top = Y - 2; btnMed.Width = 100; btnMed.Height = 24
+  btnMed.Caption = "Add Medicine"
+  btnMed.OnClick = function()
+    if not S.ready then setStatus("Connect first!", 0x0000FF); return end
+    setStatus("Adding...", 0x008080)
+    local ok, msg = addMedFood(medDB[cmbMed.ItemIndex + 1][1], 0x110)
+    setStatus(ok and ("Added: " .. msg) or ("ERR: " .. msg), ok and 0x008000 or 0x0000FF)
+  end
+  Y = Y + 32
+
+  -- FOOD
+  lbl = createLabel(frm); lbl.Left = 10; lbl.Top = Y; lbl.Caption = "Food (from Game DB)"
+  lbl.Font.Size = 9; lbl.Font.Style = "fsBold"; Y = Y + 20
+  local cmbFd = createComboBox(frm); cmbFd.Left = 10; cmbFd.Top = Y; cmbFd.Width = 320
+  for _, f in ipairs(foodDB) do cmbFd.Items.add(string.format("[%d] %s", f[1], f[2])) end; cmbFd.ItemIndex = 0
+  local btnFd = createButton(frm); btnFd.Left = 400; btnFd.Top = Y - 2; btnFd.Width = 100; btnFd.Height = 24
+  btnFd.Caption = "Add Food"
+  btnFd.OnClick = function()
+    if not S.ready then setStatus("Connect first!", 0x0000FF); return end
+    setStatus("Adding...", 0x008080)
+    local ok, msg = addMedFood(foodDB[cmbFd.ItemIndex + 1][1], 0x118)
+    setStatus(ok and ("Added: " .. msg) or ("ERR: " .. msg), ok and 0x008000 or 0x0000FF)
+  end
+
+  frm.Show()
+end
+
+-- Auto-open on table load
+openItemAdder()
+  ]]></LuaScript>
+</CheatTable>
