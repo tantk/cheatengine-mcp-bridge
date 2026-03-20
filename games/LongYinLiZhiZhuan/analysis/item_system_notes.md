@@ -84,18 +84,23 @@ GameController._instance (find via mono static field)
 | 0x78 | materialData | MaterialData |
 | 0x80 | horseData | HorseData |
 
-## Proven Working Approach (Books, Materials)
+## Current Working Approach (ALL item types) — Main-Thread GetItem via Hook
 
-**Full flow — stable, no crashes:**
-1. `il2cpp_object_new(ItemData klass)` — allocate in managed heap
-2. `.ctor(ItemType.Book=3)` — initialize as book
-3. `SetBookData(skillID, rareLv)` — sets name, icon, value, everything from game DB
-4. `il2cpp_object_new(ItemListData klass)` — create temp container
-5. `ItemListData..ctor()` — initialize temp container
-6. Manually write item into temp container's allItem[0], set count=1
-7. `player.ItemListData.MergeList(tempContainer)` — game handles both lists correctly
+**Full flow — stable, no crashes, with in-game popup:**
+1. `il2cpp_object_new(ItemDataClass)` via `createRemoteThread` — allocate in managed heap
+2. `.ctor(ItemType)` via `createRemoteThread` — initialize with correct type
+3. Type-specific setup via `createRemoteThread` (Set methods) or direct field copy (templates)
+4. `HeroData.GetItem(hero, itemPtr, showPopInfo=1, showSpeGetItem=0, 0, 0)` via **main-thread hook** on `GameController.Update()`
 
+**Key: GetItem MUST run on the game's main thread (Update loop). Off-thread calls crash during GC/autosave.**
+**Key: `showSpeGetItem=0` to avoid NullRef in `ItemListController.ResetSortType` when inventory UI is closed.**
+**Key: `showPopInfo=1` for the "acquired item" notification popup.**
 **Key: use `createRemoteThread` not `executeCodeEx` (executeCodeEx doesn't work in this game)**
+
+### OLD approach (MergeList — replaced)
+The original approach used `il2cpp_object_new(ItemListData)` + `MergeList()` to merge items directly.
+This was replaced by the main-thread GetItem hook because MergeList called from remote thread
+caused GC crashes during autosave (WriteZStream corruption).
 
 ### Adding a Book
 ```
