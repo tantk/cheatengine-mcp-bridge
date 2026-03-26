@@ -1182,48 +1182,25 @@ local function installMainThreadHook()
   local gameImage = S.gameImage
   if not gameImage or gameImage == 0 then return false, "Game image not cached (run discover first)" end
 
-  -- Fast class lookup using cached image
-  local nsA = WK.str
-  local nmA = WK.str + 8
-  writeBytes(nsA, {0x00})
+  -- Use executeCodeEx (safe) instead of shellExec/createRemoteThread (crashes with BepInEx)
+  local c_hook = _il2cpp_init()
 
   local function findClassFast(name)
-    local b = {}
-    for i = 1, #name do b[i] = string.byte(name, i) end
-    b[#b + 1] = 0
-    writeBytes(nmA, b)
-    writeQword(WK.data + 0x10, 0)
-    shellExec(function(w, q)
-      w({0x48,0x83,0xEC,0x28})
-      w({0x48,0xB9}); q(gameImage)
-      w({0x48,0xBA}); q(nsA); w({0x49,0xB8}); q(nmA)
-      w({0x48,0xB8}); q(classFromName); w({0xFF,0xD0})
-      w({0x48,0xA3}); q(WK.data + 0x10)
-      w({0x48,0x83,0xC4,0x28}); w({0xC3})
-    end)
-    sleep(10)
-    return readQword(WK.data + 0x10)
+    local ns = allocateMemory(16); writeString(ns, "")
+    local cn = allocateMemory(64); writeString(cn, name)
+    local k = executeCodeEx(0, nil, classFromName, gameImage, ns, cn)
+    deAlloc(ns); deAlloc(cn)
+    return k ~= 0 and k or nil
   end
 
-  local gcClass = findClassFast("GameController")
-  if not gcClass or gcClass == 0 then return false, "GameController class not found" end
+  local gcClass = c_hook.gc.klass
   log("gcClass=" .. toHex(gcClass))
 
-  -- Get MethodInfo* for Update(0 params)
-  local updateName = WK.str + 40
-  writeBytes(updateName, {0x55,0x70,0x64,0x61,0x74,0x65,0x00}) -- "Update\0"
-  writeQword(WK.data + 0x18, 0)
-  shellExec(function(w, q)
-    w({0x48,0x83,0xEC,0x28})
-    w({0x48,0xB9}); q(gcClass)
-    w({0x48,0xBA}); q(updateName)
-    w({0x45,0x33,0xC0})
-    w({0x48,0xB8}); q(getMethodFromName); w({0xFF,0xD0})
-    w({0x48,0xA3}); q(WK.data + 0x18)
-    w({0x48,0x83,0xC4,0x28}); w({0xC3})
-  end)
-  sleep(20)
-  local methodInfo = readQword(WK.data + 0x18)
+  -- Get MethodInfo* for Update(0 params) via executeCodeEx
+  local updateNameBuf = allocateMemory(32)
+  writeString(updateNameBuf, "Update")
+  local methodInfo = executeCodeEx(0, nil, getMethodFromName, gcClass, updateNameBuf, 0)
+  deAlloc(updateNameBuf)
   if not methodInfo or methodInfo == 0 then return false, "Update MethodInfo not found" end
   log("methodInfo=" .. toHex(methodInfo))
 
@@ -1299,31 +1276,18 @@ local function installMainThreadHook()
     log("Relay trampoline at " .. toHex(_ia_relayCode) .. " -> continues at " .. toHex(updateCodeAddr + boundary))
   end
 
-  -- Fast class lookup using cached game image (reuse findClassFast from above)
+  -- Use executeCodeEx-based class/method lookup (safe, no shellExec)
   local function findClassByName(name)
     return findClassFast(name)
   end
 
   local function resolveMethodPtr(klass, methodName, paramCount)
-    local nmAddr = WK.str + 120
-    local nb = {}
-    for i = 1, #methodName do nb[i] = string.byte(methodName, i) end
-    nb[#nb + 1] = 0
-    writeBytes(nmAddr, nb)
-    writeQword(WK.data + 0x20, 0)
-    shellExec(function(w, q)
-      w({0x48,0x83,0xEC,0x28})
-      w({0x48,0xB9}); q(klass)
-      w({0x48,0xBA}); q(nmAddr)
-      w({0x41,0xB8}); w({paramCount % 256, 0, 0, 0})
-      w({0x48,0xB8}); q(getMethodFromName); w({0xFF,0xD0})
-      w({0x48,0xA3}); q(WK.data + 0x20)
-      w({0x48,0x83,0xC4,0x28}); w({0xC3})
-    end)
-    sleep(10)
-    local mi = readQword(WK.data + 0x20)
+    local nmBuf = allocateMemory(64)
+    writeString(nmBuf, methodName)
+    local mi = executeCodeEx(0, nil, getMethodFromName, klass, nmBuf, paramCount)
+    deAlloc(nmBuf)
     if not mi or mi == 0 then return nil end
-    local ptr = readQword(mi) -- methodPointer at offset 0
+    local ptr = readQword(mi)
     if not ptr or ptr == 0 then return nil end
     return ptr
   end
@@ -1658,85 +1622,23 @@ local function discover()
   if not S.base or S.base == 0 then return false, "GameAssembly.dll not loaded" end
   if not allocWorkArea() then return false, "Work area alloc failed" end
 
-  local domainGet = getAddress("GameAssembly.il2cpp_domain_get")
-  local domainGetAsm = getAddress("GameAssembly.il2cpp_domain_get_assemblies")
-  local imageFromAsm = getAddress("GameAssembly.il2cpp_assembly_get_image")
   local classFromName = getAddress("GameAssembly.il2cpp_class_from_name")
-  local getStaticData = getAddress("GameAssembly.il2cpp_class_get_static_field_data")
   local objNew = getAddress("GameAssembly.il2cpp_object_new")
   if not objNew or objNew == 0 then return false, "il2cpp exports missing" end
   S.objNew = objNew
 
-  shellExec(function(w, q)
-    w({0x48,0x83,0xEC,0x38})
-    w({0x48,0xB8}); q(domainGet); w({0xFF,0xD0})
-    w({0x48,0x8B,0xC8}); w({0x48,0x8D,0x54,0x24,0x20})
-    w({0x48,0xB8}); q(domainGetAsm); w({0xFF,0xD0})
-    w({0x48,0xA3}); q(WK.data)
-    w({0x8B,0x44,0x24,0x20}); w({0x48,0xA3}); q(WK.data + 8)
-    w({0x48,0x83,0xC4,0x38}); w({0xC3})
-  end)
-  sleep(30)
-  local asmArr = readQword(WK.data)
-  local asmCnt = readQword(WK.data + 8)
-  if not asmArr or asmArr == 0 then return false, "No assemblies" end
-  log("assemblies: arr=" .. toHex(asmArr) .. " cnt=" .. asmCnt)
+  -- Use executeCodeEx (proven safe) instead of shellExec/createRemoteThread (crashes)
+  local c = _il2cpp_init()
+  local gameImage = c.img
+  S.gameImage = gameImage
+  log("Game image from _il2cpp_init: " .. toHex(gameImage))
 
-  local nsA = WK.str
-  local nmA = WK.str + 8
-  writeBytes(nsA, {0x00})
-
-  -- Step 1: Find the Assembly-CSharp image (one-time scan)
-  local gameImage = nil
-  local testName = "GameController"
-  local tb = {}
-  for i = 1, #testName do tb[i] = string.byte(testName, i) end
-  tb[#tb + 1] = 0
-  writeBytes(nmA, tb)
-
-  for i = 0, asmCnt - 1 do
-    local ap = readQword(asmArr + i * 8)
-    if ap and ap ~= 0 then
-      writeQword(WK.data + 0x10, 0)
-      writeQword(WK.data + 0x18, 0)
-      shellExec(function(w, q)
-        w({0x48,0x83,0xEC,0x28})
-        w({0x48,0xB9}); q(ap); w({0x48,0xB8}); q(imageFromAsm); w({0xFF,0xD0})
-        w({0x48,0xA3}); q(WK.data + 0x18) -- save image
-        w({0x48,0x8B,0xC8}); w({0x48,0xBA}); q(nsA); w({0x49,0xB8}); q(nmA)
-        w({0x48,0xB8}); q(classFromName); w({0xFF,0xD0})
-        w({0x48,0xA3}); q(WK.data + 0x10)
-        w({0x48,0x83,0xC4,0x28}); w({0xC3})
-      end)
-      sleep(10)
-      local cls = readQword(WK.data + 0x10)
-      if cls and cls ~= 0 then
-        gameImage = readQword(WK.data + 0x18)
-        S.gameImage = gameImage
-        log("Found game image at assembly " .. i .. " image=" .. toHex(gameImage))
-        break
-      end
-    end
-  end
-  if not gameImage then return false, "Game assembly image not found" end
-
-  -- Step 2: Fast class lookup using cached image (no assembly iteration)
   local function findClass(name)
-    local b = {}
-    for i = 1, #name do b[i] = string.byte(name, i) end
-    b[#b + 1] = 0
-    writeBytes(nmA, b)
-    writeQword(WK.data + 0x10, 0)
-    shellExec(function(w, q)
-      w({0x48,0x83,0xEC,0x28})
-      w({0x48,0xB9}); q(gameImage)
-      w({0x48,0xBA}); q(nsA); w({0x49,0xB8}); q(nmA)
-      w({0x48,0xB8}); q(classFromName); w({0xFF,0xD0})
-      w({0x48,0xA3}); q(WK.data + 0x10)
-      w({0x48,0x83,0xC4,0x28}); w({0xC3})
-    end)
-    sleep(10)
-    return readQword(WK.data + 0x10)
+    local ns = allocateMemory(16); writeString(ns, "")
+    local cn = allocateMemory(64); writeString(cn, name)
+    local k = executeCodeEx(0, nil, classFromName, gameImage, ns, cn)
+    deAlloc(ns); deAlloc(cn)
+    return k ~= 0 and k or nil
   end
 
   local gcClass = findClass("GameController")
@@ -1744,28 +1646,13 @@ local function discover()
   local gdcClass = findClass("GameDataController")
   log("gcClass=" .. toHex(gcClass) .. " gdcClass=" .. toHex(gdcClass))
 
-  shellExec(function(w, q)
-    w({0x48,0x83,0xEC,0x28})
-    w({0x48,0xB9}); q(gcClass); w({0x48,0xB8}); q(getStaticData); w({0xFF,0xD0})
-    w({0x48,0xA3}); q(WK.data + 0x20)
-    if gdcClass then
-      w({0x48,0xB9}); q(gdcClass); w({0x48,0xB8}); q(getStaticData); w({0xFF,0xD0})
-      w({0x48,0xA3}); q(WK.data + 0x28)
-    end
-    w({0x48,0x83,0xC4,0x28}); w({0xC3})
-  end)
-  sleep(20)
-
-  local gcStaticPtr = readQword(WK.data + 0x20)
-  if not gcStaticPtr or gcStaticPtr == 0 then return false, "GC static data null" end
-  local gc = readQword(gcStaticPtr)
+  local gc = readQword(c.gc.static + c.gc.instOff)
   if not gc or gc == 0 then return false, "GC._instance null (load save)" end
   S.gc = gc
   log("gc=" .. toHex(gc))
 
   if gdcClass then
-    local gdcStatic = readQword(WK.data + 0x28)
-    if gdcStatic and gdcStatic ~= 0 then S.gdc = readQword(gdcStatic + 0x20) end
+    S.gdc = readQword(c.gdc.static + c.gdc.instOff)
   end
 
   local wd = readQword(gc + 0x20)
