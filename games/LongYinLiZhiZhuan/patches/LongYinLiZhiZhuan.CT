@@ -2404,12 +2404,10 @@ lbl.Font.Size = 9; lbl.Font.Style = "fsBold"; Y = Y + 20
 local cmbEqType = createComboBox(frm); cmbEqType.Left = 10; cmbEqType.Top = Y; cmbEqType.Width = 80
 for _, e in ipairs(equipDBs) do cmbEqType.Items.add(e.name) end; cmbEqType.ItemIndex = 0
 local cmbEqItem = createComboBox(frm); cmbEqItem.Left = 100; cmbEqItem.Top = Y; cmbEqItem.Width = 160
-local lblEqLv = createLabel(frm); lblEqLv.Left = 270; lblEqLv.Top = Y + 3; lblEqLv.Caption = "Lv:"
-local cmbEqLv = createComboBox(frm); cmbEqLv.Left = 290; cmbEqLv.Top = Y; cmbEqLv.Width = 35
-for i = 0, 5 do cmbEqLv.Items.add(tostring(i)) end; cmbEqLv.ItemIndex = 5
-local lblEqR = createLabel(frm); lblEqR.Left = 335; lblEqR.Top = Y + 3; lblEqR.Caption = "Rare:"
-local cmbEqR = createComboBox(frm); cmbEqR.Left = 365; cmbEqR.Top = Y; cmbEqR.Width = 35
-for i = 0, 5 do cmbEqR.Items.add(tostring(i)) end; cmbEqR.ItemIndex = 5
+local lblEqLv = createLabel(frm); lblEqLv.Left = 270; lblEqLv.Top = Y + 3; lblEqLv.Caption = "Power:"
+local edtEqLv = createEdit(frm); edtEqLv.Left = 305; edtEqLv.Top = Y; edtEqLv.Width = 35; edtEqLv.Text = "20"
+local lblEqH = createLabel(frm); lblEqH.Left = 345; lblEqH.Top = Y + 3; lblEqH.Caption = "(10-50)"
+lblEqH.Font.Size = 7; lblEqH.Font.Color = 0x808080
 
 -- Populate equipment dropdown based on selected type
 local function refreshEqItems()
@@ -2447,16 +2445,12 @@ btnEq.OnClick = function()
   if not S.ready then setStatus("Connect first!", 0x0000FF); return end
   local dbInfo = equipDBs[cmbEqType.ItemIndex + 1]
   local idx = cmbEqItem.ItemIndex
-  local lv = cmbEqLv.ItemIndex
-  local rare = cmbEqR.ItemIndex
-  setStatus("Generating " .. dbInfo.name .. "...", 0x008080)
-  -- Use game's own generator (proper stats). bossLv scales stats, qualityRate=1.0
-  -- lv picker 0-5 maps to bossLv 0-25 for reasonable stat scaling
-  local ok, msg = addEquipGenerated(dbInfo.genRVA, idx, lv * 5, 1.0)
+  local bossLv = tonumber(edtEqLv.Text) or 20
+  if bossLv > 50 then bossLv = 50 end
+  setStatus("Generating " .. dbInfo.name .. " (power=" .. bossLv .. ")...", 0x008080)
+  local ok, msg = addEquipGenerated(dbInfo.genRVA, idx, bossLv, 1.0)
   if not ok then
-    -- Fallback to template clone if generator fails
-    setStatus("Generator failed, using template...", 0x808000)
-    ok, msg = addEquipment(dbInfo.off, idx, lv, rare)
+    setStatus("Generator failed: " .. tostring(msg), 0x0000FF)
   end
   setStatus(ok and ("Added: " .. msg) or ("ERR: " .. msg), ok and 0x008000 or 0x0000FF)
 end
