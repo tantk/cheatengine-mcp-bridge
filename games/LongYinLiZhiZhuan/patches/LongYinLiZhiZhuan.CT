@@ -1710,8 +1710,6 @@ doGenEquip:
   mov r8d,[rbx+14]
   mov r9d,[rbx+1C]
   db F3 0F 10 5B 18
-  mov eax,[rbx+70]
-  mov [rsp+28],eax
   mov rax,[rbx+68]
   call rax
   test rax,rax
