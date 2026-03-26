@@ -2082,12 +2082,76 @@ local function addHorse(dbIndex)
 end
 
 -- ============================================================
+-- EQUIPMENT / TREASURE GENERATOR
+-- ============================================================
+-- DB offsets on GDC: weapon=0xF0, armor=0xF8, helmet=0x100, shoes=0x108
+local equipDBs = {
+  {name="Weapon",  off=0xF0,  type=0, sub=0},
+  {name="Armor",   off=0xF8,  type=0, sub=1},
+  {name="Helmet",  off=0x100, type=0, sub=2},
+  {name="Shoes",   off=0x108, type=0, sub=3},
+}
+
+local function addEquipment(dbOff, dbIndex, desiredLv, desiredRare)
+  if not S.ready then return false, "Connect first" end
+  if not S.gdc or S.gdc == 0 then return false, "GDC not found" end
+
+  local db = readQword(S.gdc + dbOff)
+  if not db or db == 0 then return false, "DataBase null" end
+  local items = readQword(db + 0x10)
+  local count = readInteger(db + 0x18)
+  if dbIndex >= count then return false, string.format("Index %d >= count %d", dbIndex, count) end
+  local template = readQword(items + 0x20 + dbIndex * 8)
+  if not template or template == 0 then return false, "Template null" end
+
+  -- Create new ItemData (type=0 for equipment)
+  local ok2, ni = mainThreadAllocCtor(0)
+  if not ok2 or not ni or ni == 0 then return false, "alloc fail" end
+
+  -- Copy base ItemData fields from template
+  writeInteger(ni + 0x10, readInteger(template + 0x10) or 0)  -- itemID
+  writeInteger(ni + 0x18, readInteger(template + 0x18) or 0)  -- subType
+  writeQword(ni + 0x20, readQword(template + 0x20) or 0)      -- name
+  writeQword(ni + 0x28, readQword(template + 0x28) or 0)      -- checkName
+  writeQword(ni + 0x30, readQword(template + 0x30) or 0)      -- describe
+  writeInteger(ni + 0x38, readInteger(template + 0x38) or 0)   -- value
+  writeInteger(ni + 0x3C, desiredLv or 3)                       -- itemLv
+  writeInteger(ni + 0x40, desiredRare or 5)                     -- rareLv
+  writeFloat(ni + 0x44, readFloat(template + 0x44) or 1.0)     -- weight
+
+  -- Clone EquipmentData
+  local templateEqd = readQword(template + 0x60)
+  if templateEqd and templateEqd ~= 0 then
+    local eqdClass = readQword(templateEqd)
+    local newEqd = executeCodeEx(0, nil, S.objNew, eqdClass)
+    if newEqd and newEqd ~= 0 then
+      -- Copy all EquipmentData fields (0x10 to 0x4C = 60 bytes)
+      for off = 0x10, 0x4C, 4 do
+        writeInteger(newEqd + off, readInteger(templateEqd + off) or 0)
+      end
+      -- Copy pointer fields
+      writeQword(newEqd + 0x20, readQword(templateEqd + 0x20) or 0) -- baseAddData
+      writeQword(newEqd + 0x28, readQword(templateEqd + 0x28) or 0) -- extraAddData
+      writeQword(newEqd + 0x38, readQword(templateEqd + 0x38) or 0) -- animName
+      writeQword(newEqd + 0x40, readQword(templateEqd + 0x40) or 0) -- equipPoisonData
+      writeQword(ni + 0x60, newEqd)
+    else
+      writeQword(ni + 0x60, templateEqd) -- fallback
+    end
+  end
+
+  local ok, result = mainThreadGetItem(ni)
+  if not ok then return false, result end
+  return true, getItemName(ni)
+end
+
+-- ============================================================
 -- GUI
 -- ============================================================
 local frm = createForm(false)
 _itemAdderForm = frm
 frm.Caption = "LongYinLiZhiZhuan Item Adder v4 (Full Main Thread)"
-frm.Width = 520; frm.Height = 480
+frm.Width = 520; frm.Height = 530
 frm.Position = "poScreenCenter"; frm.BorderStyle = "bsSingle"
 
 local Y = 10
@@ -2103,6 +2167,7 @@ btnConn.OnClick = function()
   setStatus("Connecting...", 0x008080)
   local ok, msg = discover()
   setStatus(ok and msg or ("ERR: " .. msg), ok and 0x008000 or 0x0000FF)
+  if ok then pcall(refreshEqItems) end
 end
 Y = Y + 38
 
@@ -2152,6 +2217,63 @@ btnHr.OnClick = function()
   setStatus("Adding...", 0x008080)
   local ok, msg = addHorse(horseDB[cmbHr.ItemIndex + 1][1])
   setStatus(ok and ("Added: " .. msg) or ("ERR: " .. msg), ok and 0x008000 or 0x0000FF)
+end
+Y = Y + 32
+
+lbl = createLabel(frm); lbl.Left = 10; lbl.Top = Y; lbl.Caption = "Equipment (Weapon/Armor/Helmet/Shoes)"
+lbl.Font.Size = 9; lbl.Font.Style = "fsBold"; Y = Y + 20
+local cmbEqType = createComboBox(frm); cmbEqType.Left = 10; cmbEqType.Top = Y; cmbEqType.Width = 80
+for _, e in ipairs(equipDBs) do cmbEqType.Items.add(e.name) end; cmbEqType.ItemIndex = 0
+local cmbEqItem = createComboBox(frm); cmbEqItem.Left = 100; cmbEqItem.Top = Y; cmbEqItem.Width = 160
+local lblEqLv = createLabel(frm); lblEqLv.Left = 270; lblEqLv.Top = Y + 3; lblEqLv.Caption = "Lv:"
+local cmbEqLv = createComboBox(frm); cmbEqLv.Left = 290; cmbEqLv.Top = Y; cmbEqLv.Width = 35
+for i = 0, 10 do cmbEqLv.Items.add(tostring(i)) end; cmbEqLv.ItemIndex = 5
+local lblEqR = createLabel(frm); lblEqR.Left = 335; lblEqR.Top = Y + 3; lblEqR.Caption = "Rare:"
+local cmbEqR = createComboBox(frm); cmbEqR.Left = 365; cmbEqR.Top = Y; cmbEqR.Width = 35
+for i = 0, 5 do cmbEqR.Items.add(tostring(i)) end; cmbEqR.ItemIndex = 5
+
+-- Populate equipment dropdown based on selected type
+local function refreshEqItems()
+  cmbEqItem.Items.clear()
+  local dbInfo = equipDBs[cmbEqType.ItemIndex + 1]
+  if not S.ready or not S.gdc then
+    cmbEqItem.Items.add("(Connect first)")
+    cmbEqItem.ItemIndex = 0
+    return
+  end
+  local db = readQword(S.gdc + dbInfo.off)
+  if not db or db == 0 then return end
+  local items = readQword(db + 0x10)
+  local count = readInteger(db + 0x18)
+  for i = 0, count - 1 do
+    local t = readQword(items + 0x20 + i * 8)
+    if t and t ~= 0 then
+      local nameObj = readQword(t + 0x20)
+      if nameObj and nameObj ~= 0 then
+        local nl = readInteger(nameObj + 0x10)
+        if nl and nl > 0 and nl < 50 then
+          local tname = readString(nameObj + 0x14, nl * 2, true)
+          cmbEqItem.Items.add(string.format("[%d] %s", i, tname))
+        end
+      end
+    end
+  end
+  if cmbEqItem.Items.Count > 0 then cmbEqItem.ItemIndex = 0 end
+end
+cmbEqType.OnChange = function() refreshEqItems() end
+
+local btnEq = createButton(frm); btnEq.Left = 410; btnEq.Top = Y - 2; btnEq.Width = 90; btnEq.Height = 24
+btnEq.Caption = "Add Equip"
+btnEq.OnClick = function()
+  if not S.ready then setStatus("Connect first!", 0x0000FF); return end
+  local dbInfo = equipDBs[cmbEqType.ItemIndex + 1]
+  local idx = cmbEqItem.ItemIndex
+  local lv = cmbEqLv.ItemIndex
+  local rare = cmbEqR.ItemIndex
+  setStatus("Adding " .. dbInfo.name .. "...", 0x008080)
+  local ok, msg = addEquipment(dbInfo.off, idx, lv, rare)
+  setStatus(ok and ("Added: " .. msg) or ("ERR: " .. msg), ok and 0x008000 or 0x0000FF)
+  if ok then refreshEqItems() end
 end
 Y = Y + 32
 
