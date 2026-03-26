@@ -1710,7 +1710,8 @@ doGenEquip:
   mov r8d,[rbx+14]
   mov eax,[rbx+18]
   movd xmm3,eax
-  mov dword ptr [rsp+20],5
+  xor r9d,r9d
+  mov qword ptr [rsp+20],0
   mov rax,[rbx+68]
   call rax
   test rax,rax
@@ -2203,11 +2204,9 @@ local function addEquipGenerated(genRVA, dbIndex, bossLv, qualityRate, timeout)
   -- Write parameters to cmdBuf
   -- hookCode reads: +0x10=edx(param1), +0x14=r8d(param2), +0x18=xmm3(param3 float),
   --                 +0x1C=r9d(param4), +0x68=funcAddr, +0x70=[rsp+28](param5)
-  writeInteger(S.cmdBuf + 0x10, dbIndex)       -- param1: weapon/armor DB index
-  writeInteger(S.cmdBuf + 0x14, bossLv)        -- param2: boss level (stat scaling)
-  writeFloat(S.cmdBuf + 0x18, qualityRate or 1.0) -- param3: quality rate (float)
-  writeInteger(S.cmdBuf + 0x1C, 5)             -- param4: rarity limit (r9, max=5)
-  writeInteger(S.cmdBuf + 0x70, 5)             -- param5: extra param on stack (max rarity?)
+  writeInteger(S.cmdBuf + 0x10, dbIndex)       -- param1 (edx): weapon/armor DB index
+  writeInteger(S.cmdBuf + 0x14, bossLv)        -- param2 (r8): boss level (stat scaling)
+  writeFloat(S.cmdBuf + 0x18, qualityRate or 1.0) -- param3 (xmm3): quality rate
   writeQword(S.cmdBuf + 0x68, S.base + genRVA)
 
   -- Trigger cmd=4
@@ -2453,8 +2452,10 @@ btnEq.OnClick = function()
   local idx = cmbEqItem.ItemIndex
   local bossLv = tonumber(edtEqLv.Text) or 20
   if bossLv > 40 then bossLv = 40 end
-  setStatus("Generating " .. dbInfo.name .. " (power=" .. bossLv .. ")...", 0x008080)
-  local ok, msg = addEquipGenerated(dbInfo.genRVA, idx, bossLv, 1.0)
+  -- Float param controls quality. Try higher values for better rarity.
+  local qRate = bossLv * 1.0
+  setStatus("Generating " .. dbInfo.name .. " (bossLv=" .. bossLv .. " rate=" .. qRate .. ")...", 0x008080)
+  local ok, msg = addEquipGenerated(dbInfo.genRVA, idx, bossLv, qRate)
   if not ok then
     setStatus("Generator failed: " .. tostring(msg), 0x0000FF)
   end
