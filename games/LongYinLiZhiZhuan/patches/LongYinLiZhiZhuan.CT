@@ -1708,9 +1708,9 @@ doGenEquip:
   jz cmdError
   mov edx,[rbx+10]
   mov r8d,[rbx+14]
-  mov r9d,[rbx+1C]
   mov eax,[rbx+18]
   movd xmm3,eax
+  mov dword ptr [rsp+20],5
   mov rax,[rbx+68]
   call rax
   test rax,rax
