@@ -1576,6 +1576,7 @@ dq 0
 label(doGetItem)
 label(doCreateAndAdd)
 label(doAllocAndCtor)
+label(doGenEquip)
 label(skipSetup)
 label(cmdDone)
 label(cmdError)
@@ -1601,6 +1602,8 @@ hookCode:
   je doCreateAndAdd
   cmp eax,3
   je doAllocAndCtor
+  cmp eax,4
+  je doGenEquip
   mov dword ptr [rbx+04],2
   mov dword ptr [rbx],0
   jmp noCmd
@@ -1690,6 +1693,27 @@ doAllocAndCtor:
   mov edx,[rbx+10]
   mov rax,[rbx+58]
   call rax
+  jmp cmdDone
+
+doGenEquip:
+  push rcx
+  push rdx
+  push r8
+  push r9
+  push r10
+  push r11
+  sub rsp,58
+  mov rcx,[rbx+20]
+  test rcx,rcx
+  jz cmdError
+  mov edx,[rbx+10]
+  mov r8d,[rbx+14]
+  movss xmm3,[rbx+18]
+  mov rax,[rbx+68]
+  call rax
+  test rax,rax
+  jz cmdError
+  mov [rbx+08],rax
   jmp cmdDone
 
 cmdDone:
@@ -2167,42 +2191,40 @@ local equipDBs = {
   {name="Shoes",   off=0x108, genRVA=0x7A5480},
 }
 
--- Call game's Generate[Equip] method via shellExec.
--- Signature: ItemData* GameController.Generate[Equip](int dbIndex, int bossLv, float qualityRate)
--- rcx=GameController, edx=dbIndex, r8d=bossLv, xmm3=qualityRate
-local function callGenerateEquip(genRVA, dbIndex, bossLv, qualityRate)
-  if not S.ready then return nil end
-  local floatBuf = allocateMemory(4)
-  writeFloat(floatBuf, qualityRate or 1.0)
-  local floatBits = readInteger(floatBuf)
-  deAlloc(floatBuf)
+-- Call game's Generate[Equip] on main thread via cmdBuf cmd=4.
+-- hookCode reads: cmdBuf+0x10=dbIndex, +0x14=bossLv, +0x18=qualityRate(float), +0x68=genFuncAddr
+-- hookCode sets: cmdBuf+0x08=resulting ItemData*
+local function addEquipGenerated(genRVA, dbIndex, bossLv, qualityRate, timeout)
+  if not S.ready or not S.cmdBuf then return false, "Connect first" end
+  timeout = timeout or 3000
 
-  writeQword(WK.data, 0)
-  shellExec(function(w, q, d)
-    w({0x48,0x83,0xEC,0x38})                     -- sub rsp, 38h
-    w({0x48,0xB9}); q(S.gc)                      -- mov rcx, GameController
-    w({0xBA}); d(dbIndex)                         -- mov edx, dbIndex
-    w({0x41,0xB8}); d(bossLv)                    -- mov r8d, bossLv
-    w({0xC7,0x44,0x24,0x20}); d(floatBits)       -- mov [rsp+20h], floatBits
-    w({0xF3,0x0F,0x10,0x5C,0x24,0x20})           -- movss xmm3, [rsp+20h]
-    w({0x48,0xB8}); q(S.base + genRVA)           -- mov rax, GenerateEquip
-    w({0xFF,0xD0})                                -- call rax
-    w({0x48,0xA3}); q(WK.data)                   -- mov [WK.data], rax (result)
-    w({0x48,0x83,0xC4,0x38})                     -- add rsp, 38h
-    w({0xC3})                                     -- ret
-  end)
-  sleep(500)
-  return readQword(WK.data)
-end
+  -- Write parameters to cmdBuf
+  writeInteger(S.cmdBuf + 0x10, dbIndex)
+  writeInteger(S.cmdBuf + 0x14, bossLv)
+  writeFloat(S.cmdBuf + 0x18, qualityRate or 1.0)
+  writeQword(S.cmdBuf + 0x68, S.base + genRVA)
 
-local function addEquipGenerated(genRVA, dbIndex, bossLv, qualityRate)
-  if not S.ready then return false, "Connect first" end
-  local newItem = callGenerateEquip(genRVA, dbIndex, bossLv, qualityRate or 1.0)
-  if not newItem or newItem == 0 then return false, "GenerateEquip returned null" end
-  log("Generated item at " .. toHex(newItem))
-  local ok, result = mainThreadGetItem(newItem)
-  if not ok then return false, result end
-  return true, getItemName(newItem)
+  -- Trigger cmd=4
+  writeInteger(S.cmdBuf + 0x04, 0)  -- clear status
+  writeInteger(S.cmdBuf, 4)         -- set command
+
+  -- Wait for completion
+  local elapsed = 0
+  while elapsed < timeout do
+    local status = readInteger(S.cmdBuf + 0x04)
+    if status == 1 then
+      local newItem = readQword(S.cmdBuf + 0x08)
+      if not newItem or newItem == 0 then return false, "Generator returned null" end
+      log("Generated equip at " .. toHex(newItem))
+      -- Now add to inventory via cmd=1
+      return mainThreadGetItem(newItem)
+    elseif status == 2 then
+      return false, "Generator failed (status=2)"
+    end
+    sleep(16)
+    elapsed = elapsed + 16
+  end
+  return false, "Generator timeout"
 end
 
 local function addEquipment(dbOff, dbIndex, desiredLv, desiredRare)
