@@ -2215,9 +2215,12 @@ local function addEquipGenerated(genRVA, dbIndex, bossLv, qualityRate, timeout)
     if status == 1 then
       local newItem = readQword(S.cmdBuf + 0x08)
       if not newItem or newItem == 0 then return false, "Generator returned null" end
-      log("Generated equip at " .. toHex(newItem))
+      local itemName = getItemName(newItem)
+      log("Generated: " .. itemName .. " at " .. toHex(newItem))
       -- Now add to inventory via cmd=1
-      return mainThreadGetItem(newItem)
+      local ok2, _ = mainThreadGetItem(newItem)
+      if not ok2 then return false, "GetItem failed" end
+      return true, itemName
     elseif status == 2 then
       return false, "Generator failed (status=2)"
     end
@@ -2447,8 +2450,9 @@ btnEq.OnClick = function()
   local lv = cmbEqLv.ItemIndex
   local rare = cmbEqR.ItemIndex
   setStatus("Generating " .. dbInfo.name .. "...", 0x008080)
-  -- Use game's own generator (proper stats). bossLv=lv*2 scales stats, qualityRate=1.0
-  local ok, msg = addEquipGenerated(dbInfo.genRVA, idx, lv * 2, 1.0)
+  -- Use game's own generator (proper stats). bossLv scales stats, qualityRate=1.0
+  -- lv picker 0-5 maps to bossLv 0-25 for reasonable stat scaling
+  local ok, msg = addEquipGenerated(dbInfo.genRVA, idx, lv * 5, 1.0)
   if not ok then
     -- Fallback to template clone if generator fails
     setStatus("Generator failed, using template...", 0x808000)
