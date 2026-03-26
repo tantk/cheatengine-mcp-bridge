@@ -1015,9 +1015,9 @@ for i = 0, areaCount - 1 do
               local bt = readInteger(bldg + 0x18) or 0
               local ut = readInteger(bldg + 0x1C) or 0
               local dt = readInteger(bldg + 0x20) or 0
-              if bt > 0 then writeInteger(bldg + 0x18, 1); completed = completed + 1 end
-              if ut > 0 then writeInteger(bldg + 0x1C, 1); completed = completed + 1 end
-              if dt > 0 then writeInteger(bldg + 0x20, 1); completed = completed + 1 end
+              if bt > 0 then writeInteger(bldg + 0x18, 0); completed = completed + 1 end
+              if ut > 0 then writeInteger(bldg + 0x1C, 0); completed = completed + 1 end
+              if dt > 0 then writeInteger(bldg + 0x20, 0); completed = completed + 1 end
             end
           end
         end
