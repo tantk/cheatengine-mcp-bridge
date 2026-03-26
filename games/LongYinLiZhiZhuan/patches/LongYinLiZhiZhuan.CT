@@ -170,6 +170,7 @@ print("[SectCurrency] (value remains as set)")
 {$lua}
 if syntaxcheck then return end
 local c = _il2cpp_init()
+if not c:ensure("hd", "HeroData") then error("HeroData not loaded yet - try again") end
 local targetAddr = _findMethodAddr(c.hd.klass, "GetMaxTagNum")
 if not targetAddr or targetAddr == 0 then error("GetMaxTagNum not found") end
 
@@ -453,6 +454,7 @@ print("[SectTalent] Disabled (talent points remain as set)")
 {$lua}
 if syntaxcheck then return end
 local c = _il2cpp_init()
+if not c:ensure("gd", "GlobalData") then error("GlobalData not loaded yet - try again") end
 local listPtr = readQword(c.gd.static + c.gd.skillOff)
 if not listPtr or listPtr == 0 then error("MaxSkillNum list not found") end
 local count = readInteger(listPtr + 0x18)
@@ -471,7 +473,8 @@ if syntaxcheck then return end
 if _skillLimitOrig then
   local ok, c = pcall(_il2cpp_init)
   if ok and c then
-    local listPtr = readQword(c.gd.static + c.gd.skillOff)
+    if not c:ensure("gd", "GlobalData") then error("GlobalData not loaded yet - try again") end
+local listPtr = readQword(c.gd.static + c.gd.skillOff)
     if listPtr and listPtr ~= 0 then
       local items = readQword(listPtr + 0x10)
       if items and items ~= 0 then
@@ -497,6 +500,7 @@ end
 {$lua}
 if syntaxcheck then return end
 local c = _il2cpp_init()
+if not c:ensure("gdc", "GameDataController", 0x20) then error("GameDataController not loaded yet - try again") end
 local gdcInstance = readQword(c.gdc.static + c.gdc.instOff)
 if not gdcInstance or gdcInstance == 0 then error("GDC instance not found") end
 local tagDataBase = readQword(gdcInstance + c.gdc.tagBaseOff)
@@ -555,6 +559,7 @@ end
 {$lua}
 if syntaxcheck then return end
 local c = _il2cpp_init()
+if not c:ensure("gdc", "GameDataController", 0x20) then error("GameDataController not loaded yet - try again") end
 local gdcInstance = readQword(c.gdc.static + c.gdc.instOff)
 if not gdcInstance or gdcInstance == 0 then error("GDC instance not found") end
 local tagDataBase = readQword(gdcInstance + c.gdc.tagBaseOff)
@@ -994,6 +999,7 @@ print("[Building] (toggle again to complete new constructions)")
 {$lua}
 if syntaxcheck then return end
 local c = _il2cpp_init()
+if not c:ensure("bc", "BattleController", 0x50) then error("BattleController not loaded - enter a battle first") end
 local bcInstance = readQword(c.bc.static + c.bc.instOff)
 if not bcInstance or bcInstance == 0 then error("Not in battle (BattleController._instance null)") end
 local playerUnit = readQword(bcInstance + 0x1A8)
@@ -1789,7 +1795,9 @@ local function discover()
   log("gc=" .. toHex(gc))
 
   if gdcClass then
-    S.gdc = readQword(c.gdc.static + c.gdc.instOff)
+    if c:ensure("gdc", "GameDataController", 0x20) then
+      S.gdc = readQword(c.gdc.static + c.gdc.instOff)
+    end
   end
 
   local wd = readQword(gc + 0x20)
@@ -2446,24 +2454,55 @@ function _il2cpp_init()
     return k ~= 0 and k or nil
   end
 
-  local gc  = findClass("GameController")     or error("GameController not found")
-  local gdc = findClass("GameDataController")  or error("GameDataController not found")
-  local gd  = findClass("GlobalData")          or error("GlobalData not found")
-  local hd  = findClass("HeroData")            or error("HeroData not found")
-  local bc  = findClass("BattleController")    or error("BattleController not found")
+  -- Only GameController is required. Others are resolved lazily (IL2CPP race condition).
+  local gc = findClass("GameController")
+  if not gc then error("GameController not found - is game loaded?") end
+  local gdc = findClass("GameDataController")
+  local gd  = findClass("GlobalData")
+  local hd  = findClass("HeroData")
+  local bc  = findClass("BattleController")
   deAlloc(ns); deAlloc(cn)
 
-  -- Step 3: Build cache using snapshot offsets (0 calls — just memory reads)
+  local function klassData(k, instOff)
+    if not k then return nil end
+    return {klass=k, static=readQword(k+0xB8), instOff=instOff}
+  end
+
   _il2cppCache = {
-    img = img, findClass = findClass,
-    gc  = {klass=gc,  static=readQword(gc+0xB8),  instOff=OFFSETS.gc_inst},
-    gdc = {klass=gdc, static=readQword(gdc+0xB8), instOff=OFFSETS.gdc_inst, tagBaseOff=OFFSETS.gdc_tagBase},
-    gd  = {klass=gd,  static=readQword(gd+0xB8),  skillOff=OFFSETS.gd_skill},
-    hd  = {klass=hd},
-    bc  = {klass=bc,  static=readQword(bc+0xB8),  instOff=OFFSETS.bc_inst},
+    img = img, _cfn = cfn,
+    gc  = klassData(gc, OFFSETS.gc_inst),
+    gdc = gdc and {klass=gdc, static=readQword(gdc+0xB8), instOff=OFFSETS.gdc_inst, tagBaseOff=OFFSETS.gdc_tagBase} or nil,
+    gd  = gd and {klass=gd, static=readQword(gd+0xB8), skillOff=OFFSETS.gd_skill} or nil,
+    hd  = hd and {klass=hd} or nil,
+    bc  = bc and {klass=bc, static=readQword(bc+0xB8), instOff=OFFSETS.bc_inst} or nil,
   }
-  -- Total: 3 (domain/asm/image) + 5 (classes) = 8 executeCodeEx calls
-  print("[il2cpp] Init OK (8 calls, snapshot offsets)")
+
+  -- Lazy resolver for classes not yet initialized
+  _il2cppCache.findClass = function(name)
+    local ns2 = allocateMemory(16); writeString(ns2, "")
+    local cn2 = allocateMemory(64); writeString(cn2, name)
+    local k = executeCodeEx(0, nil, _il2cppCache._cfn, _il2cppCache.img, ns2, cn2)
+    deAlloc(ns2); deAlloc(cn2)
+    return k ~= 0 and k or nil
+  end
+
+  -- Try to resolve missing classes on next access
+  _il2cppCache.ensure = function(self, field, className, instOff)
+    if self[field] then return self[field] end
+    local k = self.findClass(className)
+    if k then
+      if instOff then
+        self[field] = {klass=k, static=readQword(k+0xB8), instOff=instOff}
+      else
+        self[field] = {klass=k}
+      end
+    end
+    return self[field]
+  end
+
+  local found = 0
+  for _, k in ipairs({gc, gdc, gd, hd, bc}) do if k then found = found + 1 end end
+  print(string.format("[il2cpp] Init OK (%d/5 classes found)", found))
   return _il2cppCache
 end
 
