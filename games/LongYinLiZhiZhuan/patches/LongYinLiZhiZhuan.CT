@@ -849,6 +849,122 @@ print("[ForceFavor] (values remain as set)")
         </CheatEntry>
 
         <CheatEntry>
+          <ID>95</ID>
+          <Description>"--- Research ---"</Description>
+          <GroupHeader>1</GroupHeader>
+          <Color>008000</Color>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>1410</ID>
+              <Description>"Instant Complete Current Research"</Description>
+              <Color>000000</Color>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript><![CDATA[[ENABLE]
+{$lua}
+if syntaxcheck then return end
+local hero = _getHero()
+if not hero then error("Hero not found") end
+local playerForceID = readInteger(hero + 0x84)
+local wd = _getWorldData()
+if not wd then error("WorldData null") end
+local forces = readQword(wd + 0x48)
+local forceItems = readQword(forces + 0x10)
+local forceCount = readInteger(forces + 0x18)
+local playerFD = nil
+for i = 0, forceCount - 1 do
+  local fd = readQword(forceItems + 0x20 + i * 8)
+  if fd and fd ~= 0 and readInteger(fd + 0x10) == playerForceID then playerFD = fd; break end
+end
+if not playerFD then error("Player ForceData not found") end
+
+local activeID = readInteger(playerFD + 0x128)
+if activeID < 0 then error("No active research (nowResearchTech < 0)") end
+
+local tld = readQword(playerFD + 0x130)
+local tldItems = readQword(tld + 0x10)
+local tldCnt = readInteger(tld + 0x18)
+
+local found = false
+for i = 0, tldCnt - 1 do
+  local e = readQword(tldItems + 0x20 + i * 8)
+  if e and e ~= 0 and readInteger(e + 0x10) == activeID then
+    local oldPct = readFloat(e + 0x18)
+    writeFloat(e + 0x18, 1.0)
+    print(string.format("[Research] Tech %d: %.0f%% -> 100%% (instant complete)", activeID, oldPct * 100))
+    found = true
+    break
+  end
+end
+if not found then print("[Research] Active tech " .. activeID .. " not found in techLvData") end
+{$asm}
+
+[DISABLE]
+{$lua}
+if syntaxcheck then return end
+print("[Research] (toggle again to complete next research)")
+{$asm}
+]]></AssemblerScript>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>1411</ID>
+              <Description>"Max All Research Levels (all techs to max)"</Description>
+              <Color>000000</Color>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript><![CDATA[[ENABLE]
+{$lua}
+if syntaxcheck then return end
+local hero = _getHero()
+if not hero then error("Hero not found") end
+local playerForceID = readInteger(hero + 0x84)
+local wd = _getWorldData()
+if not wd then error("WorldData null") end
+local forces = readQword(wd + 0x48)
+local forceItems = readQword(forces + 0x10)
+local forceCount = readInteger(forces + 0x18)
+local playerFD = nil
+for i = 0, forceCount - 1 do
+  local fd = readQword(forceItems + 0x20 + i * 8)
+  if fd and fd ~= 0 and readInteger(fd + 0x10) == playerForceID then playerFD = fd; break end
+end
+if not playerFD then error("Player ForceData not found") end
+
+local tld = readQword(playerFD + 0x130)
+local tldItems = readQword(tld + 0x10)
+local tldCnt = readInteger(tld + 0x18)
+
+local input = InputQuery("Max Research", "Set ALL tech levels to (current max varies):", "10")
+if not input then print("[Research] Cancelled"); return end
+local maxLv = tonumber(input)
+if not maxLv then print("[Research] Invalid"); return end
+
+local upgraded = 0
+for i = 0, tldCnt - 1 do
+  local e = readQword(tldItems + 0x20 + i * 8)
+  if e and e ~= 0 then
+    local curLv = readInteger(e + 0x14)
+    if curLv < maxLv then
+      writeInteger(e + 0x14, math.floor(maxLv))
+      writeFloat(e + 0x18, 0.0)
+      upgraded = upgraded + 1
+    end
+  end
+end
+-- Clear active research
+writeInteger(playerFD + 0x128, -1)
+print(string.format("[Research] Upgraded %d/%d techs to level %d", upgraded, tldCnt, maxLv))
+{$asm}
+
+[DISABLE]
+{$lua}
+if syntaxcheck then return end
+print("[Research] (values remain as set)")
+{$asm}
+]]></AssemblerScript>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+
+        <CheatEntry>
           <ID>90</ID>
           <Description>"--- Buildings ---"</Description>
           <GroupHeader>1</GroupHeader>
