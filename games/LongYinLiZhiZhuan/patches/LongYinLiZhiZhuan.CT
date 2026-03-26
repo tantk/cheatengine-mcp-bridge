@@ -2645,7 +2645,13 @@ end
 function _getHero()
   local c = _il2cpp_init()
   local inst = readQword(c.gc.static + c.gc.instOff)
-  if not inst or inst == 0 then return nil, "GameController._instance null (game not loaded?)" end
+  if not inst or inst == 0 then
+    -- Cache is stale (game restarted), clear and retry once
+    _il2cppCache = nil
+    c = _il2cpp_init()
+    inst = readQword(c.gc.static + c.gc.instOff)
+    if not inst or inst == 0 then return nil, "GameController._instance null (load a save first)" end
+  end
   local wd = readQword(inst + 0x20); if not wd or wd == 0 then return nil, "WorldData null" end
   local hl = readQword(wd + 0x50);  if not hl or hl == 0 then return nil, "HerosList null" end
   local ip = readQword(hl + 0x10);  if not ip or ip == 0 then return nil, "HerosList items null" end
@@ -2656,7 +2662,12 @@ end
 function _getWorldData()
   local c = _il2cpp_init()
   local inst = readQword(c.gc.static + c.gc.instOff)
-  if not inst or inst == 0 then return nil, "GameController._instance null" end
+  if not inst or inst == 0 then
+    _il2cppCache = nil
+    c = _il2cpp_init()
+    inst = readQword(c.gc.static + c.gc.instOff)
+    if not inst or inst == 0 then return nil, "GameController._instance null" end
+  end
   local wd = readQword(inst + 0x20); if not wd or wd == 0 then return nil, "WorldData null" end
   return wd
 end
