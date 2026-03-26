@@ -732,6 +732,112 @@ print("[Fame] (values remain as set)")
 {$asm}
               </AssemblerScript>
             </CheatEntry>
+            <CheatEntry>
+              <ID>1102</ID>
+              <Description>"Set Contribution to Other Factions (shop exchange)"</Description>
+              <Color>000000</Color>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript>
+[ENABLE]
+{$lua}
+if syntaxcheck then return end
+local wd = _getWorldData()
+if not wd then error("WorldData null") end
+local forces = readQword(wd + 0x48)
+if not forces or forces == 0 then error("Forces null") end
+local forceItems = readQword(forces + 0x10)
+local forceCount = readInteger(forces + 0x18)
+
+local input = InputQuery("Faction Contribution", "Set your contribution to ALL other factions to:", "999")
+if not input then print("[OutContrib] Cancelled"); return end
+local newVal = tonumber(input)
+if not newVal then print("[OutContrib] Invalid number"); return end
+
+local changed = 0
+for i = 0, forceCount - 1 do
+  local fd = readQword(forceItems + 0x20 + i * 8)
+  if fd and fd ~= 0 then
+    writeFloat(fd + 0x170, newVal * 1.0)
+    changed = changed + 1
+  end
+end
+print(string.format("[OutContrib] Set contribution to %d factions = %.0f", changed, newVal))
+{$asm}
+
+[DISABLE]
+{$lua}
+if syntaxcheck then return end
+print("[OutContrib] (values remain as set)")
+{$asm}
+              </AssemblerScript>
+            </CheatEntry>
+            <!-- Faction Affinity removed: calling SetForceFavor via executeCodeEx/shellcode crashes the game (not thread-safe) -->
+          </CheatEntries>
+        </CheatEntry>
+
+        <CheatEntry>
+          <ID>90</ID>
+          <Description>"--- Buildings ---"</Description>
+          <GroupHeader>1</GroupHeader>
+          <Color>008000</Color>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>1400</ID>
+              <Description>"Instant Complete All Buildings (build/upgrade/destroy)"</Description>
+              <Color>000000</Color>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript>
+[ENABLE]
+{$lua}
+if syntaxcheck then return end
+local wd = _getWorldData()
+if not wd then error("WorldData null") end
+local areas = readQword(wd + 0x30)
+if not areas or areas == 0 then error("Areas null") end
+local areaCount = readInteger(areas + 0x18)
+local areaItems = readQword(areas + 0x10)
+if not areaItems or areaItems == 0 then error("Area items null") end
+
+local completed = 0
+for i = 0, areaCount - 1 do
+  local area = readQword(areaItems + 0x20 + i * 8)
+  if area and area ~= 0 then
+    local tiles = readQword(area + 0xC0)
+    if tiles and tiles ~= 0 then
+      local tileCount = readInteger(tiles + 0x18)
+      local tileItems = readQword(tiles + 0x10)
+      if tileCount and tileItems and tileItems ~= 0 then
+        for t = 0, tileCount - 1 do
+          local tile = readQword(tileItems + 0x20 + t * 8)
+          if tile and tile ~= 0 then
+            local bldg = readQword(tile + 0x28)
+            if bldg and bldg ~= 0 then
+              local bt = readInteger(bldg + 0x18) or 0
+              local ut = readInteger(bldg + 0x1C) or 0
+              local dt = readInteger(bldg + 0x20) or 0
+              if bt > 0 then writeInteger(bldg + 0x18, 0); completed = completed + 1 end
+              if ut > 0 then writeInteger(bldg + 0x1C, 0); completed = completed + 1 end
+              if dt > 0 then writeInteger(bldg + 0x20, 0); completed = completed + 1 end
+            end
+          end
+        end
+      end
+    end
+    -- Also clear area branch defence upgrade time
+    local branchTime = readInteger(area + 0xD8) or 0
+    if branchTime > 0 then writeInteger(area + 0xD8, 0); completed = completed + 1 end
+  end
+end
+print(string.format("[Building] Instantly completed %d pending operations across %d areas", completed, areaCount))
+{$asm}
+
+[DISABLE]
+{$lua}
+if syntaxcheck then return end
+print("[Building] (toggle again to complete new constructions)")
+{$asm}
+              </AssemblerScript>
+            </CheatEntry>
           </CheatEntries>
         </CheatEntry>
 
