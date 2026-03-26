@@ -2055,10 +2055,24 @@ local function addHorse(dbIndex)
   writeInteger(ni + 0x3C, readInteger(template + 0x3C) or 0)   -- itemLv
   writeInteger(ni + 0x40, readInteger(template + 0x40) or 0)   -- rareLv
   writeFloat(ni + 0x44, readFloat(template + 0x44) or 0)       -- weight
-  -- horseData at offset 0x88
+  -- horseData at offset 0x88 — clone template then set 100% tame
   local templateHD = readQword(template + 0x88)
   if templateHD and templateHD ~= 0 then
-    writeQword(ni + 0x88, templateHD)
+    -- Allocate new HorseData object so we don't modify the template
+    local hdClass = readQword(templateHD) -- klass ptr from template object
+    local newHD = executeCodeEx(0, nil, S.objNew, hdClass)
+    if newHD and newHD ~= 0 then
+      -- Copy all fields from template (0x10 to 0x44 = 52 bytes of data)
+      for off = 0x10, 0x44, 4 do
+        writeInteger(newHD + off, readInteger(templateHD + off) or 0)
+      end
+      -- Set favorRate to 1.0 (100% tame)
+      writeFloat(newHD + 0x3C, 1.0)
+      writeQword(ni + 0x88, newHD)
+    else
+      -- Fallback: share template HorseData
+      writeQword(ni + 0x88, templateHD)
+    end
   end
 
   -- Add to inventory via main-thread GetItem
