@@ -1708,7 +1708,10 @@ doGenEquip:
   jz cmdError
   mov edx,[rbx+10]
   mov r8d,[rbx+14]
+  mov r9d,[rbx+1C]
   db F3 0F 10 5B 18
+  mov eax,[rbx+70]
+  mov [rsp+28],eax
   mov rax,[rbx+68]
   call rax
   test rax,rax
@@ -2199,9 +2202,13 @@ local function addEquipGenerated(genRVA, dbIndex, bossLv, qualityRate, timeout)
   timeout = timeout or 3000
 
   -- Write parameters to cmdBuf
-  writeInteger(S.cmdBuf + 0x10, dbIndex)
-  writeInteger(S.cmdBuf + 0x14, bossLv)
-  writeFloat(S.cmdBuf + 0x18, qualityRate or 1.0)
+  -- hookCode reads: +0x10=edx(param1), +0x14=r8d(param2), +0x18=xmm3(param3 float),
+  --                 +0x1C=r9d(param4), +0x68=funcAddr, +0x70=[rsp+28](param5)
+  writeInteger(S.cmdBuf + 0x10, dbIndex)       -- param1: weapon/armor DB index
+  writeInteger(S.cmdBuf + 0x14, bossLv)        -- param2: boss level (stat scaling)
+  writeFloat(S.cmdBuf + 0x18, qualityRate or 1.0) -- param3: quality rate (float)
+  writeInteger(S.cmdBuf + 0x1C, 5)             -- param4: rarity limit (r9, max=5)
+  writeInteger(S.cmdBuf + 0x70, 5)             -- param5: extra param on stack (max rarity?)
   writeQword(S.cmdBuf + 0x68, S.base + genRVA)
 
   -- Trigger cmd=4
@@ -2406,7 +2413,7 @@ for _, e in ipairs(equipDBs) do cmbEqType.Items.add(e.name) end; cmbEqType.ItemI
 local cmbEqItem = createComboBox(frm); cmbEqItem.Left = 100; cmbEqItem.Top = Y; cmbEqItem.Width = 160
 local lblEqLv = createLabel(frm); lblEqLv.Left = 270; lblEqLv.Top = Y + 3; lblEqLv.Caption = "Power:"
 local edtEqLv = createEdit(frm); edtEqLv.Left = 305; edtEqLv.Top = Y; edtEqLv.Width = 35; edtEqLv.Text = "20"
-local lblEqH = createLabel(frm); lblEqH.Left = 345; lblEqH.Top = Y + 3; lblEqH.Caption = "(10-50)"
+local lblEqH = createLabel(frm); lblEqH.Left = 345; lblEqH.Top = Y + 3; lblEqH.Caption = "(1-40)"
 lblEqH.Font.Size = 7; lblEqH.Font.Color = 0x808080
 
 -- Populate equipment dropdown based on selected type
@@ -2446,7 +2453,7 @@ btnEq.OnClick = function()
   local dbInfo = equipDBs[cmbEqType.ItemIndex + 1]
   local idx = cmbEqItem.ItemIndex
   local bossLv = tonumber(edtEqLv.Text) or 20
-  if bossLv > 50 then bossLv = 50 end
+  if bossLv > 40 then bossLv = 40 end
   setStatus("Generating " .. dbInfo.name .. " (power=" .. bossLv .. ")...", 0x008080)
   local ok, msg = addEquipGenerated(dbInfo.genRVA, idx, bossLv, 1.0)
   if not ok then
