@@ -2150,13 +2150,60 @@ end
 -- ============================================================
 -- EQUIPMENT / TREASURE GENERATOR
 -- ============================================================
+-- Generator RVAs from snapshot (f7.8):
+local EQUIP_GEN_RVA = {
+  Weapon4  = 0x7A73C0,  -- GenerateWeapon(int idx, int bossLv, float rate)
+  Weapon5  = 0x7A7C70,  -- GenerateWeapon(int idx, int bossLv, int weaponType, float rate, ??)
+  Armor    = 0x795B70,  -- GenerateArmor(int idx, int bossLv, float rate)
+  Helmet   = 0x79A490,  -- GenerateHelmet(int idx, int bossLv, float rate)
+  Shoes    = 0x7A5480,  -- GenerateShoes(int idx, int bossLv, float rate)
+}
+
 -- DB offsets on GDC: weapon=0xF0, armor=0xF8, helmet=0x100, shoes=0x108
 local equipDBs = {
-  {name="Weapon",  off=0xF0,  type=0, sub=0},
-  {name="Armor",   off=0xF8,  type=0, sub=1},
-  {name="Helmet",  off=0x100, type=0, sub=2},
-  {name="Shoes",   off=0x108, type=0, sub=3},
+  {name="Weapon",  off=0xF0,  genRVA=0x7A73C0},
+  {name="Armor",   off=0xF8,  genRVA=0x795B70},
+  {name="Helmet",  off=0x100, genRVA=0x79A490},
+  {name="Shoes",   off=0x108, genRVA=0x7A5480},
 }
+
+-- Call game's Generate[Equip] method via shellExec.
+-- Signature: ItemData* GameController.Generate[Equip](int dbIndex, int bossLv, float qualityRate)
+-- rcx=GameController, edx=dbIndex, r8d=bossLv, xmm3=qualityRate
+local function callGenerateEquip(genRVA, dbIndex, bossLv, qualityRate)
+  if not S.ready then return nil end
+  local floatBuf = allocateMemory(4)
+  writeFloat(floatBuf, qualityRate or 1.0)
+  local floatBits = readInteger(floatBuf)
+  deAlloc(floatBuf)
+
+  writeQword(WK.data, 0)
+  shellExec(function(w, q, d)
+    w({0x48,0x83,0xEC,0x38})                     -- sub rsp, 38h
+    w({0x48,0xB9}); q(S.gc)                      -- mov rcx, GameController
+    w({0xBA}); d(dbIndex)                         -- mov edx, dbIndex
+    w({0x41,0xB8}); d(bossLv)                    -- mov r8d, bossLv
+    w({0xC7,0x44,0x24,0x20}); d(floatBits)       -- mov [rsp+20h], floatBits
+    w({0xF3,0x0F,0x10,0x5C,0x24,0x20})           -- movss xmm3, [rsp+20h]
+    w({0x48,0xB8}); q(S.base + genRVA)           -- mov rax, GenerateEquip
+    w({0xFF,0xD0})                                -- call rax
+    w({0x48,0xA3}); q(WK.data)                   -- mov [WK.data], rax (result)
+    w({0x48,0x83,0xC4,0x38})                     -- add rsp, 38h
+    w({0xC3})                                     -- ret
+  end)
+  sleep(500)
+  return readQword(WK.data)
+end
+
+local function addEquipGenerated(genRVA, dbIndex, bossLv, qualityRate)
+  if not S.ready then return false, "Connect first" end
+  local newItem = callGenerateEquip(genRVA, dbIndex, bossLv, qualityRate or 1.0)
+  if not newItem or newItem == 0 then return false, "GenerateEquip returned null" end
+  log("Generated item at " .. toHex(newItem))
+  local ok, result = mainThreadGetItem(newItem)
+  if not ok then return false, result end
+  return true, getItemName(newItem)
+end
 
 local function addEquipment(dbOff, dbIndex, desiredLv, desiredRare)
   if not S.ready then return false, "Connect first" end
@@ -2377,10 +2424,15 @@ btnEq.OnClick = function()
   local idx = cmbEqItem.ItemIndex
   local lv = cmbEqLv.ItemIndex
   local rare = cmbEqR.ItemIndex
-  setStatus("Adding " .. dbInfo.name .. "...", 0x008080)
-  local ok, msg = addEquipment(dbInfo.off, idx, lv, rare)
+  setStatus("Generating " .. dbInfo.name .. "...", 0x008080)
+  -- Use game's own generator (proper stats). bossLv=lv*2 scales stats, qualityRate=1.0
+  local ok, msg = addEquipGenerated(dbInfo.genRVA, idx, lv * 2, 1.0)
+  if not ok then
+    -- Fallback to template clone if generator fails
+    setStatus("Generator failed, using template...", 0x808000)
+    ok, msg = addEquipment(dbInfo.off, idx, lv, rare)
+  end
   setStatus(ok and ("Added: " .. msg) or ("ERR: " .. msg), ok and 0x008000 or 0x0000FF)
-  if ok then refreshEqItems() end
 end
 Y = Y + 32
 
