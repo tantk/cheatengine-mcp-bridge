@@ -888,9 +888,13 @@ local found = false
 for i = 0, tldCnt - 1 do
   local e = readQword(tldItems + 0x20 + i * 8)
   if e and e ~= 0 and readInteger(e + 0x10) == activeID then
+    local oldLv = readInteger(e + 0x14)
     local oldPct = readFloat(e + 0x18)
-    writeFloat(e + 0x18, 1.0)
-    print(string.format("[Research] Tech %d: %.0f%% -> 100%% (instant complete)", activeID, oldPct * 100))
+    -- Complete: increment level, reset progress, clear active research
+    writeInteger(e + 0x14, oldLv + 1)
+    writeFloat(e + 0x18, 0.0)
+    writeInteger(playerFD + 0x128, -1)
+    print(string.format("[Research] Tech %d: lv %d -> %d (was %.0f%%, now complete and cleared)", activeID, oldLv, oldLv + 1, oldPct * 100))
     found = true
     break
   end
