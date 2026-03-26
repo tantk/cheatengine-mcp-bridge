@@ -2161,28 +2161,16 @@ local function addEquipment(dbOff, dbIndex, desiredLv, desiredRare)
         end
       end
 
-      -- Clone stats from best equipment via HeroSpeAddData.Clone (RVA=0xC47AA0)
+      -- Copy stat pointers from best existing equipment (pure memory, no executeCodeEx)
       if bestBaseAdd and bestBaseAdd ~= 0 then
-        local cloneRVA = 0xC47AA0
-        local clonedBase = executeCodeEx(0, nil, S.base + cloneRVA, bestBaseAdd)
-        if clonedBase and clonedBase ~= 0 then
-          writeQword(newEqd + 0x20, clonedBase)
-          log("Cloned baseAddData from lv " .. bestLv .. " equipment")
-        else
-          writeQword(newEqd + 0x20, readQword(templateEqd + 0x20) or 0)
-        end
+        writeQword(newEqd + 0x20, bestBaseAdd)
+        log("Copied baseAddData from lv " .. bestLv .. " equipment")
       else
         writeQword(newEqd + 0x20, readQword(templateEqd + 0x20) or 0)
       end
 
       if bestExtraAdd and bestExtraAdd ~= 0 then
-        local cloneRVA = 0xC47AA0
-        local clonedExtra = executeCodeEx(0, nil, S.base + cloneRVA, bestExtraAdd)
-        if clonedExtra and clonedExtra ~= 0 then
-          writeQword(newEqd + 0x28, clonedExtra)
-        else
-          writeQword(newEqd + 0x28, readQword(templateEqd + 0x28) or 0)
-        end
+        writeQword(newEqd + 0x28, bestExtraAdd)
       else
         writeQword(newEqd + 0x28, readQword(templateEqd + 0x28) or 0)
       end
@@ -2280,7 +2268,7 @@ for _, e in ipairs(equipDBs) do cmbEqType.Items.add(e.name) end; cmbEqType.ItemI
 local cmbEqItem = createComboBox(frm); cmbEqItem.Left = 100; cmbEqItem.Top = Y; cmbEqItem.Width = 160
 local lblEqLv = createLabel(frm); lblEqLv.Left = 270; lblEqLv.Top = Y + 3; lblEqLv.Caption = "Lv:"
 local cmbEqLv = createComboBox(frm); cmbEqLv.Left = 290; cmbEqLv.Top = Y; cmbEqLv.Width = 35
-for i = 0, 10 do cmbEqLv.Items.add(tostring(i)) end; cmbEqLv.ItemIndex = 5
+for i = 0, 5 do cmbEqLv.Items.add(tostring(i)) end; cmbEqLv.ItemIndex = 5
 local lblEqR = createLabel(frm); lblEqR.Left = 335; lblEqR.Top = Y + 3; lblEqR.Caption = "Rare:"
 local cmbEqR = createComboBox(frm); cmbEqR.Left = 365; cmbEqR.Top = Y; cmbEqR.Width = 35
 for i = 0, 5 do cmbEqR.Items.add(tostring(i)) end; cmbEqR.ItemIndex = 5
