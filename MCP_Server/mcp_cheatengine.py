@@ -90,6 +90,22 @@ import json
 import struct
 import time
 import traceback
+import logging
+import os
+
+# ============================================================================
+# FILE LOGGING (for diagnosing MCP disconnects)
+# ============================================================================
+_log_path = os.path.join(os.environ.get("TEMP", "."), "ce_mcp_server.log")
+logging.basicConfig(
+    filename=_log_path,
+    level=logging.DEBUG,
+    format="%(asctime)s %(levelname)s %(message)s",
+    datefmt="%H:%M:%S",
+)
+_log = logging.getLogger("ce_mcp")
+_log.info("=== MCP Server starting ===")
+_log.info(f"Log file: {_log_path}")
 
 try:
     import win32file
@@ -154,8 +170,10 @@ class CEBridgeClient:
                 0,
                 None
             )
+            _log.info("Pipe connected")
             return True
-        except pywintypes.error:
+        except pywintypes.error as e:
+            _log.warning(f"Pipe connect failed: {e}")
             return False
 
     def send_command(self, method, params=None):
@@ -178,12 +196,15 @@ class CEBridgeClient:
             try:
                 req_json = json.dumps(request).encode('utf-8')
                 header = struct.pack('<I', len(req_json))
+                _log.debug(f">> {method} ({len(req_json)} bytes)")
 
+                t0 = time.time()
                 win32file.WriteFile(self.handle, header)
                 win32file.WriteFile(self.handle, req_json)
 
                 resp_header_buffer = win32file.ReadFile(self.handle, 4)[1]
                 if len(resp_header_buffer) < 4:
+                    _log.error("Incomplete response header")
                     self.close()
                     last_error = ConnectionError("Incomplete response header from CE.")
                     continue
@@ -191,19 +212,24 @@ class CEBridgeClient:
                 resp_len = struct.unpack('<I', resp_header_buffer)[0]
 
                 if resp_len > 16 * 1024 * 1024:
+                    _log.error(f"Response too large: {resp_len}")
                     self.close()
                     raise ConnectionError(f"Response too large: {resp_len} bytes")
 
                 resp_body_buffer = win32file.ReadFile(self.handle, resp_len)[1]
+                elapsed = time.time() - t0
+                _log.debug(f"<< {resp_len} bytes in {elapsed:.2f}s")
 
                 try:
                     response = json.loads(resp_body_buffer.decode('utf-8'))
                 except json.JSONDecodeError:
+                    _log.error(f"Invalid JSON: {resp_body_buffer[:200]}")
                     self.close()
                     last_error = ConnectionError("Invalid JSON received from CE")
                     continue
 
                 if 'error' in response:
+                    _log.warning(f"CE error: {response['error']}")
                     return {"success": False, "error": str(response['error'])}
                 if 'result' in response:
                     return response['result']
@@ -211,6 +237,7 @@ class CEBridgeClient:
                 return response
 
             except pywintypes.error as e:
+                _log.error(f"Pipe error: {e}")
                 self.close()
                 last_error = ConnectionError(f"Pipe Communication failed: {e}")
                 if attempt < max_retries - 1:
@@ -222,6 +249,7 @@ class CEBridgeClient:
 
     def close(self):
         if self.handle:
+            _log.info("Pipe closing")
             try:
                 win32file.CloseHandle(self.handle)
             except:
