@@ -1063,46 +1063,24 @@ local multi = tonumber(input) or 5
 if multi > 99 then multi = 99 end
 if multi < 1 then multi = 1 end
 
--- Write to BOTH baseAddData (+0x2B0) and totalAddData (+0x2B8)
--- baseAddData is persistent, totalAddData gets recalculated but we set both
--- Key 172 = TravelSpeedRate
-_travelOrigAddrs = {}
-for _, offset in ipairs({0x2B0, 0x2B8}) do
-  local addData = readQword(hero + offset)
-  if addData and addData ~= 0 then
-    local innerDict = readQword(addData + 0x10)
-    if innerDict and innerDict ~= 0 then
-      local entries = readQword(innerDict + 0x18)
-      local count = readInteger(innerDict + 0x20)
-      if entries and count then
-        for i = 0, count - 1 do
-          local base = entries + 0x20 + i * 16
-          local key = readInteger(base + 8)
-          if key == 172 then
-            local addr = base + 12
-            local orig = readFloat(addr)
-            table.insert(_travelOrigAddrs, {addr=addr, orig=orig})
-            writeFloat(addr, orig + (multi - 1))
-            print(string.format("[Travel] +%X key172: %.2f -> %.2f", offset, orig, orig + (multi-1)))
-            break
-          end
-        end
-      end
-    end
-  end
-end
-if #_travelOrigAddrs == 0 then print("[Travel] TravelSpeedRate not found - key 172 missing") end
+-- Boost horse speed directly (hero+0x208=horse ItemData, +0x88=HorseData, +0x14=speed float)
+local horseItem = readQword(hero + 0x208)
+if not horseItem or horseItem == 0 then error("No horse equipped! Equip a horse first.") end
+local horseData = readQword(horseItem + 0x88)
+if not horseData or horseData == 0 then error("Horse has no HorseData") end
+local origSpeed = readFloat(horseData + 0x14)
+_travelOrig = {addr = horseData + 0x14, val = origSpeed}
+writeFloat(horseData + 0x14, origSpeed * multi)
+print(string.format("[Travel] Horse speed: %.0f -> %.0f (x%d)", origSpeed, origSpeed * multi, multi))
 {$asm}
 
 [DISABLE]
 {$lua}
 if syntaxcheck then return end
-if _travelOrigAddrs then
-  for _, p in ipairs(_travelOrigAddrs) do
-    writeFloat(p.addr, p.orig)
-  end
-  print(string.format("[Travel] Restored %d entries", #_travelOrigAddrs))
-  _travelOrigAddrs = nil
+if _travelOrig then
+  writeFloat(_travelOrig.addr, _travelOrig.val)
+  print(string.format("[Travel] Horse speed restored to %.0f", _travelOrig.val))
+  _travelOrig = nil
 end
 {$asm}
 ]]></AssemblerScript>
