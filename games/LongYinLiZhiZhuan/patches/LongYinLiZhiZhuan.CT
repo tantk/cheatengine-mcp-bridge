@@ -2200,6 +2200,8 @@ local equipDBs = {
    staticItems={"香囊 Sachet","羽扇 Fan","扳指 Ring","玉佩 Pendant","腰带 Belt","面具 Mask"}},
   {name="HorseArmor", off=nil,  genRVA=0x79E450,
    staticItems={"鞍具 Saddle"}},
+  {name="Treasure",   off=nil,  genRVA=0x7A7250,
+   staticItems={"Random Treasure"}},
 }
 
 -- Call game's Generate[Equip] on main thread via cmdBuf cmd=4.
