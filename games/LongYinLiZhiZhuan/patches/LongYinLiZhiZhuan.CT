@@ -2943,7 +2943,28 @@ function _il2cpp_init()
 
   local found = 0
   for _, k in ipairs({gc, gdc, gd, hd, bc}) do if k then found = found + 1 end end
-  print(string.format("[il2cpp] Init OK (%d/5 classes found)", found))
+
+  -- Detect and display game version
+  local verStr = "?"
+  local fixStr = "?"
+  if gd then
+    local gdStatic = readQword(gd + 0xB8)
+    if gdStatic and gdStatic ~= 0 then
+      local vnPtr = readQword(gdStatic + 0x68)
+      if vnPtr and vnPtr ~= 0 then
+        local nl = readInteger(vnPtr + 0x10)
+        if nl and nl > 0 then verStr = readString(vnPtr + 0x14, nl*2, true) or "?" end
+      end
+      local fnPtr = readQword(gdStatic + 0x70)
+      if fnPtr and fnPtr ~= 0 then
+        local nl = readInteger(fnPtr + 0x10)
+        if nl and nl > 0 then fixStr = readString(fnPtr + 0x14, nl*2, true) or "?" end
+      end
+    end
+  end
+  local gaSize = getModuleSize("GameAssembly.dll") or 0
+  print(string.format("[龙胤立志传] 版本 %s %s (GA: %d bytes, %d/5 classes)", verStr, fixStr, gaSize, found))
+
   return _il2cppCache
 end
 
