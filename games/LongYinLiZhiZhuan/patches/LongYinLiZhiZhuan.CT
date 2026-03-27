@@ -2820,10 +2820,19 @@ function _il2cpp_init()
   local pid = getOpenedProcessID()
   if not pid or pid == 0 then error("请先用CE连接游戏 [Attach CE to game first]") end
 
+  -- Verify process is actually alive by reading memory (PID can be stale)
+  local gaAddr = getAddress("GameAssembly.dll")
+  if not gaAddr or gaAddr < 0x100000 then error("游戏未运行 [Game not running]") end
+  local testRead = readBytes(gaAddr, 1)
+  if not testRead then
+    _il2cppCache = nil
+    error("游戏已关闭 [Game closed]")
+  end
+
   -- Version check: detect if game updated since RVAs were last resolved
   local gaSize = getModuleSize("GameAssembly.dll")
   if gaSize and gaSize ~= KNOWN_GA_SIZE then
-    error(string.format("游戏版本不匹配! GA大小: %d (预期: %d) — 需要更新RVA [Game version mismatch — RVAs need update]", gaSize, KNOWN_GA_SIZE))
+    error(string.format("游戏版本不匹配! GA大小: %d (预期: %d) — 需要更新RVA [Game version mismatch]", gaSize, KNOWN_GA_SIZE))
   end
 
   -- Validate ALL il2cpp exports upfront to prevent nearby allocation popup
@@ -2920,7 +2929,12 @@ end
 
 function _isGameRunning()
   local pid = getOpenedProcessID()
-  return pid and pid ~= 0
+  if not pid or pid == 0 then return false end
+  -- PID can be stale for dead process — verify by reading memory
+  local ga = getAddress("GameAssembly.dll")
+  if not ga or ga < 0x100000 then return false end
+  local b = readBytes(ga, 1)
+  return b ~= nil
 end
 
 function _getHero()
