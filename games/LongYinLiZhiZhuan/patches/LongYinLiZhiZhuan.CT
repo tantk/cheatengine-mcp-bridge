@@ -1709,6 +1709,7 @@ doGenEquip:
   mov edx,[rbx+10]
   mov r8d,[rbx+14]
   mov eax,[rbx+18]
+  movd xmm2,eax
   movd xmm3,eax
   xor r9d,r9d
   mov qword ptr [rsp+20],0
@@ -2197,6 +2198,8 @@ local equipDBs = {
   {name="Shoes",      off=0x108, genRVA=0x7A5480},
   {name="Accessory",  off=nil,   genRVA=0x797A70,
    staticItems={"香囊 Sachet","羽扇 Fan","扳指 Ring","玉佩 Pendant","腰带 Belt","面具 Mask"}},
+  {name="HorseArmor", off=nil,  genRVA=0x79E450,
+   staticItems={"鞍具 Saddle"}},
 }
 
 -- Call game's Generate[Equip] on main thread via cmdBuf cmd=4.
