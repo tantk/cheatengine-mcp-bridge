@@ -12,6 +12,7 @@
         <CheatEntry>
           <ID>10</ID>
           <Description>"--- 资源 [Resources] ---"</Description>
+          <Options moHideChildren="1" moAllowManualCollapseAndExpand="1"/>
           <GroupHeader>1</GroupHeader>
           <Color>008000</Color>
           <CheatEntries>
@@ -157,6 +158,7 @@ print("[SectCurrency] (value remains as set)")
         <CheatEntry>
           <ID>20</ID>
           <Description>"--- 天赋 [Talents] ---"</Description>
+          <Options moHideChildren="1" moAllowManualCollapseAndExpand="1"/>
           <GroupHeader>1</GroupHeader>
           <Color>008000</Color>
           <CheatEntries>
@@ -441,6 +443,7 @@ print("[SectTalent] Disabled (talent points remain as set)")
         <CheatEntry>
           <ID>30</ID>
           <Description>"--- 武学 [Skills] ---"</Description>
+          <Options moHideChildren="1" moAllowManualCollapseAndExpand="1"/>
           <GroupHeader>1</GroupHeader>
           <Color>008000</Color>
           <CheatEntries>
@@ -610,6 +613,7 @@ end
         <CheatEntry>
           <ID>50</ID>
           <Description>"--- 生命 [Health] ---"</Description>
+          <Options moHideChildren="1" moAllowManualCollapseAndExpand="1"/>
           <GroupHeader>1</GroupHeader>
           <Color>008000</Color>
           <CheatEntries>
@@ -671,6 +675,7 @@ print("[Injury] (values remain as set)")
         <CheatEntry>
           <ID>70</ID>
           <Description>"--- 声望 [Reputation] ---"</Description>
+          <Options moHideChildren="1" moAllowManualCollapseAndExpand="1"/>
           <GroupHeader>1</GroupHeader>
           <Color>008000</Color>
           <CheatEntries>
@@ -856,6 +861,7 @@ print("[ForceFavor] (values remain as set)")
         <CheatEntry>
           <ID>75</ID>
           <Description>"--- 门派资源 [Sect Resources] ---"</Description>
+          <Options moHideChildren="1" moAllowManualCollapseAndExpand="1"/>
           <GroupHeader>1</GroupHeader>
           <Color>008000</Color>
           <CheatEntries>
@@ -914,6 +920,7 @@ print("[Resource] (values remain as set)")
         <CheatEntry>
           <ID>95</ID>
           <Description>"--- 科研 [Research] ---"</Description>
+          <Options moHideChildren="1" moAllowManualCollapseAndExpand="1"/>
           <GroupHeader>1</GroupHeader>
           <Color>008000</Color>
           <CheatEntries>
@@ -978,6 +985,7 @@ print("[Research] (toggle again to complete next research)")
         <CheatEntry>
           <ID>90</ID>
           <Description>"--- 建筑 [Buildings] ---"</Description>
+          <Options moHideChildren="1" moAllowManualCollapseAndExpand="1"/>
           <GroupHeader>1</GroupHeader>
           <Color>008000</Color>
           <CheatEntries>
@@ -1044,6 +1052,7 @@ print("[Building] (toggle again to complete new constructions)")
         <CheatEntry>
           <ID>96</ID>
           <Description>"--- 旅行 [Travel] ---"</Description>
+          <Options moHideChildren="1" moAllowManualCollapseAndExpand="1"/>
           <GroupHeader>1</GroupHeader>
           <Color>008000</Color>
           <CheatEntries>
@@ -1091,6 +1100,7 @@ end
         <CheatEntry>
           <ID>60</ID>
           <Description>"--- 战斗 [Battle] ---"</Description>
+          <Options moHideChildren="1" moAllowManualCollapseAndExpand="1"/>
           <GroupHeader>1</GroupHeader>
           <Color>008000</Color>
           <CheatEntries>
@@ -1209,6 +1219,7 @@ print("[Battle] (toggle again to use in next fight)")
         <CheatEntry>
           <ID>40</ID>
           <Description>"--- 属性 [Stats] ---"</Description>
+          <Options moHideChildren="1" moAllowManualCollapseAndExpand="1"/>
           <GroupHeader>1</GroupHeader>
           <Color>008000</Color>
           <CheatEntries>
@@ -1264,6 +1275,7 @@ print("[StatCap] (values remain as set)")
         <CheatEntry>
           <ID>80</ID>
           <Description>"--- 物品添加器 [Item Adder] ---"</Description>
+          <Options moHideChildren="1" moAllowManualCollapseAndExpand="1"/>
           <GroupHeader>1</GroupHeader>
           <Color>FF8000</Color>
           <CheatEntries>
