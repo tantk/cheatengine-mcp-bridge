@@ -1869,10 +1869,13 @@ local function discover()
     return k ~= 0 and k or nil
   end
 
+  log("About to findClass GameController...")
   local gcClass = findClass("GameController")
+  log("gcClass=" .. toHex(gcClass or 0))
   if not gcClass or gcClass == 0 then return false, "GameController not found" end
+  log("About to findClass GameDataController...")
   local gdcClass = findClass("GameDataController")
-  log("gcClass=" .. toHex(gcClass) .. " gdcClass=" .. toHex(gdcClass))
+  log("gdcClass=" .. toHex(gdcClass or 0))
 
   local gc = readQword(c.gc.static + c.gc.instOff)
   if not gc or gc == 0 then return false, "GC._instance null (load save)" end
@@ -2351,7 +2354,7 @@ btnConn.OnClick = function()
   setStatus("Connecting...", 0x008080)
   local ok, msg = discover()
   setStatus(ok and msg or ("ERR: " .. msg), ok and 0x008000 or 0x0000FF)
-  if ok then pcall(refreshEqItems) end
+  if ok then pcall(function() _refreshEqItemsFn() end) end
 end
 Y = Y + 38
 
@@ -2443,6 +2446,7 @@ local function refreshEqItems()
   if cmbEqItem.Items.Count > 0 then cmbEqItem.ItemIndex = 0 end
 end
 cmbEqType.OnChange = function() refreshEqItems() end
+_refreshEqItemsFn = refreshEqItems
 
 local btnEq = createButton(frm); btnEq.Left = 410; btnEq.Top = Y - 2; btnEq.Width = 90; btnEq.Height = 24
 btnEq.Caption = "Add Equip"
