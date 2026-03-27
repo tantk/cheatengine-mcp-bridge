@@ -1049,40 +1049,45 @@ print("[Building] (toggle again to complete new constructions)")
           <CheatEntries>
             <CheatEntry>
               <ID>1420</ID>
-              <Description>"Fast World Map Travel (5x speed)"</Description>
+              <Description>"Fast World Map Travel (player only, 5x speed)"</Description>
               <Color>000000</Color>
               <VariableType>Auto Assembler Script</VariableType>
               <AssemblerScript><![CDATA[[ENABLE]
 {$lua}
 if syntaxcheck then return end
-local c = _il2cpp_init()
-local gd = c.findClass("GlobalData")
-if not gd then error("GlobalData not loaded yet - try again") end
-local gs = readQword(gd + 0xB8)
--- BaseTravelSpeed at +0x110, BaseTravelTimeScale at +0x114
-local origSpeed = readFloat(gs + 0x110)
-local origScale = readFloat(gs + 0x114)
-_travelOrigSpeed = origSpeed
-_travelOrigScale = origScale
-writeFloat(gs + 0x110, origSpeed * 5.0)
-writeFloat(gs + 0x114, origScale * 5.0)
-print(string.format("[Travel] Speed: %.1f -> %.1f, TimeScale: %.1f -> %.1f", origSpeed, origSpeed*5, origScale, origScale*5))
+local hero = _getHero()
+if not hero then error("Hero not found") end
+-- HeroData.totalAddData at +0x2B8 (HeroSpeAddData)
+-- Key 172 = TravelSpeedRate in the internal Dictionary<int,float>
+local totalAdd = readQword(hero + 0x2B8)
+if not totalAdd or totalAdd == 0 then error("totalAddData null") end
+local innerDict = readQword(totalAdd + 0x10)
+local entries = readQword(innerDict + 0x18)
+local count = readInteger(innerDict + 0x20)
+_travelOrigAddr = nil
+_travelOrigVal = nil
+for i = 0, count - 1 do
+  local base = entries + 0x20 + i * 16
+  local key = readInteger(base + 8)
+  if key == 172 then
+    _travelOrigAddr = base + 12
+    _travelOrigVal = readFloat(base + 12)
+    writeFloat(base + 12, _travelOrigVal + 5.0)
+    print(string.format("[Travel] Player TravelSpeedRate: %.2f -> %.2f", _travelOrigVal, _travelOrigVal + 5.0))
+    break
+  end
+end
+if not _travelOrigAddr then print("[Travel] TravelSpeedRate key not found in hero data") end
 {$asm}
 
 [DISABLE]
 {$lua}
 if syntaxcheck then return end
-if _travelOrigSpeed then
-  local c = _il2cpp_init()
-  local gd = c.findClass("GlobalData")
-  if gd then
-    local gs = readQword(gd + 0xB8)
-    writeFloat(gs + 0x110, _travelOrigSpeed)
-    writeFloat(gs + 0x114, _travelOrigScale)
-  end
-  print("[Travel] Restored original speed")
-  _travelOrigSpeed = nil
-  _travelOrigScale = nil
+if _travelOrigAddr and _travelOrigVal then
+  writeFloat(_travelOrigAddr, _travelOrigVal)
+  print(string.format("[Travel] Restored to %.2f", _travelOrigVal))
+  _travelOrigAddr = nil
+  _travelOrigVal = nil
 end
 {$asm}
 ]]></AssemblerScript>
