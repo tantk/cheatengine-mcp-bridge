@@ -2412,10 +2412,11 @@ lbl.Font.Size = 9; lbl.Font.Style = "fsBold"; Y = Y + 20
 local cmbEqType = createComboBox(frm); cmbEqType.Left = 10; cmbEqType.Top = Y; cmbEqType.Width = 80
 for _, e in ipairs(equipDBs) do cmbEqType.Items.add(e.name) end; cmbEqType.ItemIndex = 0
 local cmbEqItem = createComboBox(frm); cmbEqItem.Left = 100; cmbEqItem.Top = Y; cmbEqItem.Width = 160
-local lblEqLv = createLabel(frm); lblEqLv.Left = 270; lblEqLv.Top = Y + 3; lblEqLv.Caption = "Power:"
-local edtEqLv = createEdit(frm); edtEqLv.Left = 305; edtEqLv.Top = Y; edtEqLv.Width = 35; edtEqLv.Text = "20"
-local lblEqH = createLabel(frm); lblEqH.Left = 345; lblEqH.Top = Y + 3; lblEqH.Caption = "(1-40)"
-lblEqH.Font.Size = 7; lblEqH.Font.Color = 0x808080
+local lblEqLv = createLabel(frm); lblEqLv.Left = 270; lblEqLv.Top = Y + 3; lblEqLv.Caption = "Rarity:"
+local cmbEqRare = createComboBox(frm); cmbEqRare.Left = 310; cmbEqRare.Top = Y; cmbEqRare.Width = 90
+cmbEqRare.Items.add("0 White"); cmbEqRare.Items.add("1 Normal"); cmbEqRare.Items.add("2 Good")
+cmbEqRare.Items.add("3 Excellent"); cmbEqRare.Items.add("4 Perfect"); cmbEqRare.Items.add("5 Legendary")
+cmbEqRare.ItemIndex = 5
 
 -- Populate equipment dropdown based on selected type
 local function refreshEqItems()
@@ -2456,11 +2457,9 @@ btnEq.OnClick = function()
   -- Parse real DB index from dropdown text "[35] 软弓" → 35
   local selText = cmbEqItem.Items[cmbEqItem.ItemIndex]
   local idx = tonumber(selText and selText:match("^%[(%d+)%]")) or cmbEqItem.ItemIndex
-  local bossLv = tonumber(edtEqLv.Text) or 20
-  if bossLv > 40 then bossLv = 40 end
-  local qRate = bossLv * 1.0
-  setStatus(string.format("Gen %s idx=%d bossLv=%d rate=%.0f", dbInfo.name, idx, bossLv, qRate), 0x008080)
-  local ok, msg = addEquipGenerated(dbInfo.genRVA, idx, bossLv, qRate)
+  local rareLv = cmbEqRare.ItemIndex  -- 0-5 maps directly to rarity
+  setStatus(string.format("Gen %s [%d] rarity=%d", dbInfo.name, idx, rareLv), 0x008080)
+  local ok, msg = addEquipGenerated(dbInfo.genRVA, idx, rareLv, 1.0)
   if not ok then
     setStatus("Generator failed: " .. tostring(msg), 0x0000FF)
   end
