@@ -1042,6 +1042,55 @@ print("[Building] (toggle again to complete new constructions)")
         </CheatEntry>
 
         <CheatEntry>
+          <ID>96</ID>
+          <Description>"--- Travel ---"</Description>
+          <GroupHeader>1</GroupHeader>
+          <Color>008000</Color>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>1420</ID>
+              <Description>"Fast World Map Travel (5x speed)"</Description>
+              <Color>000000</Color>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript><![CDATA[[ENABLE]
+{$lua}
+if syntaxcheck then return end
+local c = _il2cpp_init()
+local gd = c.findClass("GlobalData")
+if not gd then error("GlobalData not loaded yet - try again") end
+local gs = readQword(gd + 0xB8)
+-- BaseTravelSpeed at +0x110, BaseTravelTimeScale at +0x114
+local origSpeed = readFloat(gs + 0x110)
+local origScale = readFloat(gs + 0x114)
+_travelOrigSpeed = origSpeed
+_travelOrigScale = origScale
+writeFloat(gs + 0x110, origSpeed * 5.0)
+writeFloat(gs + 0x114, origScale * 5.0)
+print(string.format("[Travel] Speed: %.1f -> %.1f, TimeScale: %.1f -> %.1f", origSpeed, origSpeed*5, origScale, origScale*5))
+{$asm}
+
+[DISABLE]
+{$lua}
+if syntaxcheck then return end
+if _travelOrigSpeed then
+  local c = _il2cpp_init()
+  local gd = c.findClass("GlobalData")
+  if gd then
+    local gs = readQword(gd + 0xB8)
+    writeFloat(gs + 0x110, _travelOrigSpeed)
+    writeFloat(gs + 0x114, _travelOrigScale)
+  end
+  print("[Travel] Restored original speed")
+  _travelOrigSpeed = nil
+  _travelOrigScale = nil
+end
+{$asm}
+]]></AssemblerScript>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+
+        <CheatEntry>
           <ID>60</ID>
           <Description>"--- Battle ---"</Description>
           <GroupHeader>1</GroupHeader>
