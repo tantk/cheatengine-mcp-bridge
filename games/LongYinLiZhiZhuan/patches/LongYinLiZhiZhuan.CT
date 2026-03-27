@@ -2205,10 +2205,10 @@ local function addEquipGenerated(genRVA, dbIndex, bossLv, qualityRate, timeout)
   timeout = timeout or 3000
 
   -- Write parameters to cmdBuf
-  -- hookCode reads: +0x10=edx(param1), +0x14=r8d(param2), +0x18=xmm3(param3 float),
-  --                 +0x1C=r9d(param4), +0x68=funcAddr, +0x70=[rsp+28](param5)
-  writeInteger(S.cmdBuf + 0x10, dbIndex)       -- param1 (edx): weapon/armor DB index
-  writeInteger(S.cmdBuf + 0x14, bossLv)        -- param2 (r8): boss level (stat scaling)
+  -- hookCode reads: +0x10=edx(param1), +0x14=r8d(param2), +0x18=xmm3(param3 float)
+  -- PARAMS SWAPPED: edx=bossLv, r8d=weaponIndex (confirmed by test: idx=35 power=20 → got weapon 20)
+  writeInteger(S.cmdBuf + 0x10, bossLv)        -- param1 (edx): boss level (stat scaling)
+  writeInteger(S.cmdBuf + 0x14, dbIndex)       -- param2 (r8): weapon/armor DB index
   writeFloat(S.cmdBuf + 0x18, qualityRate or 1.0) -- param3 (xmm3): quality rate
   writeQword(S.cmdBuf + 0x68, S.base + genRVA)
 
@@ -2453,12 +2453,13 @@ btnEq.Caption = "Add Equip"
 btnEq.OnClick = function()
   if not S.ready then setStatus("Connect first!", 0x0000FF); return end
   local dbInfo = equipDBs[cmbEqType.ItemIndex + 1]
-  local idx = cmbEqItem.ItemIndex
+  -- Parse real DB index from dropdown text "[35] 软弓" → 35
+  local selText = cmbEqItem.Items[cmbEqItem.ItemIndex]
+  local idx = tonumber(selText and selText:match("^%[(%d+)%]")) or cmbEqItem.ItemIndex
   local bossLv = tonumber(edtEqLv.Text) or 20
   if bossLv > 40 then bossLv = 40 end
-  -- Float param controls quality. Try higher values for better rarity.
   local qRate = bossLv * 1.0
-  setStatus("Generating " .. dbInfo.name .. " (bossLv=" .. bossLv .. " rate=" .. qRate .. ")...", 0x008080)
+  setStatus(string.format("Gen %s idx=%d bossLv=%d rate=%.0f", dbInfo.name, idx, bossLv, qRate), 0x008080)
   local ok, msg = addEquipGenerated(dbInfo.genRVA, idx, bossLv, qRate)
   if not ok then
     setStatus("Generator failed: " .. tostring(msg), 0x0000FF)
