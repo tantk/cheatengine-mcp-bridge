@@ -1067,7 +1067,7 @@ local count = readInteger(innerDict + 0x20)
 local input = InputQuery("Travel Speed", "Enter speed multiplier (2-10, default 5):", "5")
 if not input then print("[Travel] Cancelled"); return end
 local multi = tonumber(input) or 5
-if multi > 10 then multi = 10 end
+if multi > 99 then multi = 99 end
 if multi < 1 then multi = 1 end
 
 _travelOrigAddr = nil
