@@ -1096,34 +1096,43 @@ end
           <CheatEntries>
             <CheatEntry>
               <ID>1001</ID>
-              <Description>"Battle Speed Boost"</Description>
+              <Description>"Battle Speed Boost (continuous)"</Description>
               <Color>000000</Color>
               <VariableType>Auto Assembler Script</VariableType>
               <AssemblerScript><![CDATA[[ENABLE]
 {$lua}
 if syntaxcheck then return end
-local wd = _getWorldData()
-if not wd then error("WorldData null") end
-local cur = readFloat(wd + 0x1D0)
-local input = InputQuery("Battle Speed", string.format("Current: %.0fx. Enter new speed (1-100):", cur), "50")
+local input = InputQuery("Battle Speed", "Enter speed (game max=10, enter higher, 1-100):", "50")
 if not input then print("[Battle] Cancelled"); return end
 local val = tonumber(input) or 50
 if val > 100 then val = 100 end
 if val < 1 then val = 1 end
-_battleSpeedOrig = cur
-writeFloat(wd + 0x1D0, val)
-print(string.format("[Battle] Speed: %.0fx -> %.0fx", cur, val))
+_battleSpeedVal = val
+
+-- Timer continuously forces the value since game overwrites it each frame
+if _battleSpeedTimer then _battleSpeedTimer.destroy() end
+_battleSpeedTimer = createTimer(nil)
+_battleSpeedTimer.Interval = 50
+_battleSpeedTimer.OnTimer = function()
+  local ok, wd = pcall(_getWorldData)
+  if ok and wd then
+    writeFloat(wd + 0x1D0, _battleSpeedVal)
+  end
+end
+_battleSpeedTimer.Enabled = true
+print(string.format("[Battle] Speed locked to %.0fx", val))
 {$asm}
 
 [DISABLE]
 {$lua}
 if syntaxcheck then return end
-if _battleSpeedOrig then
-  local wd = _getWorldData()
-  if wd then writeFloat(wd + 0x1D0, _battleSpeedOrig) end
-  print(string.format("[Battle] Restored to %.0fx", _battleSpeedOrig))
-  _battleSpeedOrig = nil
+if _battleSpeedTimer then
+  _battleSpeedTimer.destroy()
+  _battleSpeedTimer = nil
 end
+local ok, wd = pcall(_getWorldData)
+if ok and wd then writeFloat(wd + 0x1D0, 1.0) end
+print("[Battle] Speed timer stopped, restored to 1x")
 {$asm}
 ]]></AssemblerScript>
             </CheatEntry>
