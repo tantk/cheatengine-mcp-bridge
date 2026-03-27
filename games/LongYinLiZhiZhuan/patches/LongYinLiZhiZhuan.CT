@@ -2070,9 +2070,22 @@ local function discover()
     TREASURE_GEN_RVA = resolveRVA(gcClass, "GenerateTreasure", 3)
   end
 
+  -- Log game version + resolved RVAs for crash analysis
   local gaSize = getModuleSize("GameAssembly.dll")
-  log(string.format("RVAs auto-resolved (GA size=%d): getItem=%s genWeapon=%s genTreasure=%s",
-    gaSize or 0, tostring(RVA.getItem), tostring(equipDBs[1].genRVA), tostring(TREASURE_GEN_RVA)))
+  local verInfo = "?"
+  if c.gd then
+    pcall(function()
+      local gs = readQword(c.findClass("GlobalData") + 0xB8)
+      local vn = readQword(gs + 0x68)
+      local fn = readQword(gs + 0x70)
+      local v = readString(vn + 0x14, readInteger(vn + 0x10) * 2, true)
+      local f = readString(fn + 0x14, readInteger(fn + 0x10) * 2, true)
+      verInfo = v .. " " .. f
+    end)
+  end
+  log(string.format("Game: %s (GA=%d bytes)", verInfo, gaSize or 0))
+  log(string.format("RVAs: getItem=%s ctor=%s genWeapon=%s genTreasure=%s",
+    tostring(RVA.getItem), tostring(RVA.ctor), tostring(equipDBs[1].genRVA), tostring(TREASURE_GEN_RVA)))
 
   -- Install main-thread hook
   local hookOk, hookErr = installMainThreadHook()
