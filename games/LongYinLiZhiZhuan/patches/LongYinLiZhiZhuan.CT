@@ -1064,6 +1064,12 @@ if not totalAdd or totalAdd == 0 then error("totalAddData null") end
 local innerDict = readQword(totalAdd + 0x10)
 local entries = readQword(innerDict + 0x18)
 local count = readInteger(innerDict + 0x20)
+local input = InputQuery("Travel Speed", "Enter speed multiplier (2-10, default 5):", "5")
+if not input then print("[Travel] Cancelled"); return end
+local multi = tonumber(input) or 5
+if multi > 10 then multi = 10 end
+if multi < 1 then multi = 1 end
+
 _travelOrigAddr = nil
 _travelOrigVal = nil
 for i = 0, count - 1 do
@@ -1072,8 +1078,9 @@ for i = 0, count - 1 do
   if key == 172 then
     _travelOrigAddr = base + 12
     _travelOrigVal = readFloat(base + 12)
-    writeFloat(base + 12, _travelOrigVal + 5.0)
-    print(string.format("[Travel] Player TravelSpeedRate: %.2f -> %.2f", _travelOrigVal, _travelOrigVal + 5.0))
+    local newVal = _travelOrigVal + (multi - 1)
+    writeFloat(base + 12, newVal)
+    print(string.format("[Travel] Player speed x%.0f (rate: %.2f -> %.2f)", multi, _travelOrigVal, newVal))
     break
   end
 end
