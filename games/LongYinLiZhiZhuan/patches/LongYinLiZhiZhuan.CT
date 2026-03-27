@@ -1102,10 +1102,10 @@ end
               <AssemblerScript><![CDATA[[ENABLE]
 {$lua}
 if syntaxcheck then return end
-local input = InputQuery("Battle Speed", "Enter speed (game max=10, enter higher, 1-100):", "50")
+local input = InputQuery("Battle Speed", "Enter speed (game max=10, try 200-500, max 999):", "50")
 if not input then print("[Battle] Cancelled"); return end
 local val = tonumber(input) or 50
-if val > 100 then val = 100 end
+if val > 999 then val = 999 end
 if val < 1 then val = 1 end
 _battleSpeedVal = val
 
