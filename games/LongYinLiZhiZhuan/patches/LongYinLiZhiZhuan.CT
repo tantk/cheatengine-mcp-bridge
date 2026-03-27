@@ -2033,6 +2033,7 @@ end
 local function mainThreadGetItem(itemDataPtr, timeout)
   if not S.cmdBuf then return false, "Not connected" end
   timeout = timeout or 3000
+  log(string.format("cmd1 GetItem: item=%s hero=%s getItemPtr=%s", toHex(itemDataPtr), toHex(S.hero), toHex(_ia_getItemPtr)))
   writeQword(S.cmdBuf + 0x08, itemDataPtr)
   writeQword(S.cmdBuf + 0x28, S.hero or 0)
   writeQword(S.cmdBuf + 0x30, _ia_getItemPtr or 0)
@@ -2052,12 +2053,15 @@ local function mainThreadGetItem(itemDataPtr, timeout)
   local st = readInteger(S.cmdBuf + 0x04)
   local gc = readQword(S.cmdBuf + 0x20)
   local cmdVal = readInteger(S.cmdBuf) or 0
-  return false, string.format("Timeout cmd=%d st=%d gc=%X", cmdVal, st, gc or 0)
+  local msg = string.format("Timeout cmd=%d st=%d gc=%X", cmdVal, st, gc or 0)
+  log("cmd1 " .. msg)
+  return false, msg
 end
 
 local function mainThreadCreateAndAdd(itemType, setupFunc, arg1, arg2, arg3, timeout)
   if not S.cmdBuf then return false, "Not connected" end
   timeout = timeout or 3000
+  log(string.format("cmd2 CreateAndAdd: type=%d setup=%s args=%s/%s/%s", itemType, toHex(setupFunc), tostring(arg1), tostring(arg2), tostring(arg3)))
   writeInteger(S.cmdBuf + 0x10, itemType)
   writeInteger(S.cmdBuf + 0x14, arg1 or 0)
   writeInteger(S.cmdBuf + 0x18, arg2 or 0)
@@ -2084,6 +2088,7 @@ end
 local function mainThreadAllocCtor(itemType, timeout)
   if not S.cmdBuf then return false, "Not connected" end
   timeout = timeout or 3000
+  log(string.format("cmd3 AllocCtor: type=%d", itemType))
   writeInteger(S.cmdBuf + 0x10, itemType)
   writeQword(S.cmdBuf + 0x48, S.objNew)
   writeQword(S.cmdBuf + 0x50, S.itemKlass)
@@ -2163,8 +2168,24 @@ local function mergeIntoInventory(itemPtr)
 end
 
 -- ============================================================
--- ADD FUNCTIONS
+-- ADD FUNCTIONS (all logged)
 -- ============================================================
+local function safeAdd(name, params, fn)
+  log("ADD " .. name .. ": " .. params)
+  local ok, result = pcall(fn)
+  if ok then
+    if type(result) == "boolean" then
+      log("ADD " .. name .. " -> direct return")
+      return result
+    end
+    log("ADD " .. name .. " -> OK")
+    return result
+  else
+    log("ADD " .. name .. " -> CRASH: " .. tostring(result))
+    return false, "Crashed: " .. tostring(result)
+  end
+end
+
 local function addBook(skillID, rareLv)
   if not S.ready then return false, "Connect first" end
   local ok, ptr = mainThreadCreateAndAdd(3, S.setBookAddr, skillID, rareLv, 0)
@@ -2222,6 +2243,7 @@ end
 local function addHorse(dbIndex)
   if not S.ready then return false, "Connect first" end
   if not S.gdc or S.gdc == 0 then return false, "GDC not found" end
+  log(string.format("addHorse: idx=%d gdc=%s", dbIndex, toHex(S.gdc)))
 
   -- Read template from horseDataBase (offset 0x120)
   local db = readQword(S.gdc + 0x120)
@@ -2339,6 +2361,7 @@ end
 local function addEquipGenerated(genRVA, dbIndex, bossLv, qualityRate, timeout)
   if not S.ready or not S.cmdBuf then return false, "Connect first" end
   timeout = timeout or 3000
+  log(string.format("cmd4 GenEquip: RVA=%X idx=%d bossLv=%d rate=%.1f", genRVA, dbIndex, bossLv, qualityRate or 1.0))
 
   -- Write parameters to cmdBuf
   -- hookCode reads: +0x10=edx(param1), +0x14=r8d(param2), +0x18=xmm3(param3 float)
