@@ -104,8 +104,14 @@ logging.basicConfig(
     datefmt="%H:%M:%S",
 )
 _log = logging.getLogger("ce_mcp")
-_log.info("=== MCP Server starting ===")
-_log.info(f"Log file: {_log_path}")
+_log.info("=" * 50)
+_log.info("MCP Server starting (PID=%d)", os.getpid())
+_log.info("Log file: %s", _log_path)
+
+import atexit
+def _log_shutdown():
+    _log.info("MCP Server shutting down (PID=%d)", os.getpid())
+atexit.register(_log_shutdown)
 
 try:
     import win32file
@@ -205,7 +211,7 @@ class CEBridgeClient:
                 resp_header_buffer = win32file.ReadFile(self.handle, 4)[1]
                 if len(resp_header_buffer) < 4:
                     _log.error("Incomplete response header")
-                    self.close()
+                    self.close("incomplete header")
                     last_error = ConnectionError("Incomplete response header from CE.")
                     continue
 
@@ -213,18 +219,20 @@ class CEBridgeClient:
 
                 if resp_len > 16 * 1024 * 1024:
                     _log.error(f"Response too large: {resp_len}")
-                    self.close()
+                    self.close("response too large")
                     raise ConnectionError(f"Response too large: {resp_len} bytes")
 
                 resp_body_buffer = win32file.ReadFile(self.handle, resp_len)[1]
                 elapsed = time.time() - t0
                 _log.debug(f"<< {resp_len} bytes in {elapsed:.2f}s")
+                if elapsed > 5.0:
+                    _log.warning(f"SLOW response: {elapsed:.1f}s for {method}")
 
                 try:
                     response = json.loads(resp_body_buffer.decode('utf-8'))
                 except json.JSONDecodeError:
                     _log.error(f"Invalid JSON: {resp_body_buffer[:200]}")
-                    self.close()
+                    self.close("invalid JSON")
                     last_error = ConnectionError("Invalid JSON received from CE")
                     continue
 
@@ -238,7 +246,7 @@ class CEBridgeClient:
 
             except pywintypes.error as e:
                 _log.error(f"Pipe error: {e}")
-                self.close()
+                self.close(f"pipe error: {e}")
                 last_error = ConnectionError(f"Pipe Communication failed: {e}")
                 if attempt < max_retries - 1:
                     continue
@@ -247,9 +255,9 @@ class CEBridgeClient:
             raise last_error
         raise ConnectionError("Unknown communication error")
 
-    def close(self):
+    def close(self, reason="unknown"):
         if self.handle:
-            _log.info("Pipe closing")
+            _log.warning("Pipe closing (reason: %s)", reason)
             try:
                 win32file.CloseHandle(self.handle)
             except:
@@ -505,7 +513,14 @@ def poll_dbvm_watch(address: str, max_results: int = 1000) -> str:
 @mcp.tool()
 def evaluate_lua(code: str) -> str:
     """Execute arbitrary Lua code in Cheat Engine."""
-    return format_result(ce_client.send_command("evaluate_lua", {"code": code}))
+    snippet = code.strip().split('\n')[0][:80]
+    _log.info("evaluate_lua: %s", snippet)
+    try:
+        result = format_result(ce_client.send_command("evaluate_lua", {"code": code}))
+        return result
+    except Exception as e:
+        _log.error("evaluate_lua FAILED: %s", e)
+        raise
 
 @mcp.tool()
 def auto_assemble(script: str) -> str:
@@ -519,8 +534,11 @@ def ping() -> str:
 
 if __name__ == "__main__":
     try:
+        _log.info("Starting FastMCP server (v11/v99 compatible)")
         debug_log("Starting FastMCP server (v11/v99 compatible)...")
         mcp.run()
+        _log.info("FastMCP server exited normally")
     except Exception as e:
+        _log.critical("FATAL CRASH: %s\n%s", e, traceback.format_exc())
         debug_log(f"Fatal Crash: {e}")
         traceback.print_exc(file=sys.stderr)
