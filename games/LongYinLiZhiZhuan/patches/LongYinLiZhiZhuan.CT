@@ -1401,7 +1401,14 @@ local function allocWorkArea()
   end
   sleep(100) -- drain any in-flight Update before freeing hook memory
   for _, n in ipairs({"cmdBuf","hookCode","origUpdatePtr","wkCode","wkData","wkStr"}) do
-    pcall(function() autoAssemble("unregistersymbol("..n..")\ndealloc("..n..")") end)
+    pcall(function()
+      local addr = getAddress(n)
+      if addr and addr > 0x10000 then
+        autoAssemble("unregistersymbol("..n..")\ndealloc("..n..")")
+      else
+        pcall(function() autoAssemble("unregistersymbol("..n..")") end)
+      end
+    end)
   end
   local ok = autoAssemble([[
 alloc(wkCode, 512)
@@ -2187,21 +2194,21 @@ local function safeAdd(name, params, fn)
 end
 
 local function addBook(skillID, rareLv)
-  if not S.ready then return false, "Connect first" end
+  if not S.ready then return false, "请先连接游戏 [Connect first]" end
   local ok, ptr = mainThreadCreateAndAdd(3, S.setBookAddr, skillID, rareLv, 0)
   if not ok then return false, ptr end
   return true, getItemName(ptr)
 end
 
 local function addMaterial(subType, itemLv, rareLv)
-  if not S.ready then return false, "Connect first" end
+  if not S.ready then return false, "请先连接游戏 [Connect first]" end
   local ok, ptr = mainThreadCreateAndAdd(5, S.base + RVA.setMat, subType, itemLv, rareLv)
   if not ok then return false, ptr end
   return true, getItemName(ptr)
 end
 
 local function addMedFood(dbIndex, dbOffset)
-  if not S.ready then return false, "Connect first" end
+  if not S.ready then return false, "请先连接游戏 [Connect first]" end
   if not S.gdc or S.gdc == 0 then return false, "GDC not found" end
 
   -- Read template from database: gdc + dbOffset -> List -> items[dbIndex]
@@ -2241,7 +2248,7 @@ local function addMedFood(dbIndex, dbOffset)
 end
 
 local function addHorse(dbIndex)
-  if not S.ready then return false, "Connect first" end
+  if not S.ready then return false, "请先连接游戏 [Connect first]" end
   if not S.gdc or S.gdc == 0 then return false, "GDC not found" end
   log(string.format("addHorse: idx=%d gdc=%s", dbIndex, toHex(S.gdc)))
 
@@ -2327,7 +2334,7 @@ local treasureTypes = {
 }
 
 local function addTreasure(typeIdx, rareLv, timeout)
-  if not S.ready or not S.cmdBuf then return false, "Connect first" end
+  if not S.ready or not S.cmdBuf then return false, "请先连接游戏 [Connect first]" end
   timeout = timeout or 3000
   -- edx=typeIdx, r8d=rareLv (same swap pattern as GenerateWeapon)
   writeInteger(S.cmdBuf + 0x10, typeIdx)
@@ -2359,7 +2366,7 @@ end
 -- hookCode reads: cmdBuf+0x10=dbIndex, +0x14=bossLv, +0x18=qualityRate(float), +0x68=genFuncAddr
 -- hookCode sets: cmdBuf+0x08=resulting ItemData*
 local function addEquipGenerated(genRVA, dbIndex, bossLv, qualityRate, timeout)
-  if not S.ready or not S.cmdBuf then return false, "Connect first" end
+  if not S.ready or not S.cmdBuf then return false, "请先连接游戏 [Connect first]" end
   timeout = timeout or 3000
   log(string.format("cmd4 GenEquip: RVA=%X idx=%d bossLv=%d rate=%.1f", genRVA, dbIndex, bossLv, qualityRate or 1.0))
 
@@ -2398,7 +2405,7 @@ local function addEquipGenerated(genRVA, dbIndex, bossLv, qualityRate, timeout)
 end
 
 local function addEquipment(dbOff, dbIndex, desiredLv, desiredRare)
-  if not S.ready then return false, "Connect first" end
+  if not S.ready then return false, "请先连接游戏 [Connect first]" end
   if not S.gdc or S.gdc == 0 then return false, "GDC not found" end
 
   local db = readQword(S.gdc + dbOff)
@@ -2503,12 +2510,12 @@ frm.Position = "poScreenCenter"; frm.BorderStyle = "bsSingle"
 local Y = 10
 local lblStatus = createLabel(frm)
 lblStatus.Left = 10; lblStatus.Top = 445; lblStatus.Width = 500
-lblStatus.Caption = "Click Connect first"; lblStatus.Font.Color = 0x808080
+lblStatus.Caption = "请先点击连接游戏 [Click Connect first]"; lblStatus.Font.Color = 0x808080
 local function setStatus(msg, color) lblStatus.Caption = msg; lblStatus.Font.Color = color or 0 end
 
 local btnConn = createButton(frm)
 btnConn.Left = 10; btnConn.Top = Y; btnConn.Width = 130; btnConn.Height = 28
-btnConn.Caption = "Connect to Game"
+btnConn.Caption = "连接游戏 [Connect]"
 btnConn.OnClick = function()
   -- Check game is attached first to avoid scary CE allocation errors
   local pid = getOpenedProcessID()
@@ -2544,7 +2551,7 @@ local lblIDHint = createLabel(frm); lblIDHint.Left = 342; lblIDHint.Top = Y - 14
 local btnBook = createButton(frm); btnBook.Left = 400; btnBook.Top = Y - 2; btnBook.Width = 100; btnBook.Height = 24
 btnBook.Caption = "Add Book"
 btnBook.OnClick = function()
-  if not S.ready then setStatus("Connect first!", 0x0000FF); return end
+  if not S.ready then setStatus("请先连接游戏! [Connect first!]", 0x0000FF); return end
   local sid = edtID.Text ~= "" and tonumber(edtID.Text) or skillDB[cmbSk.ItemIndex + 1][1]
   setStatus("Adding...", 0x008080)
   local ok, msg = addBook(sid, 5)
@@ -2562,7 +2569,7 @@ for i = 0, 5 do cmbML.Items.add(tostring(i)) end; cmbML.ItemIndex = 5
 local btnMat = createButton(frm); btnMat.Left = 400; btnMat.Top = Y - 2; btnMat.Width = 100; btnMat.Height = 24
 btnMat.Caption = "Add Material"
 btnMat.OnClick = function()
-  if not S.ready then setStatus("Connect first!", 0x0000FF); return end
+  if not S.ready then setStatus("请先连接游戏! [Connect first!]", 0x0000FF); return end
   setStatus("Adding...", 0x008080)
   local ok, msg = addMaterial(cmbMT.ItemIndex, cmbML.ItemIndex, 5)
   setStatus(ok and ("Added: " .. msg) or ("ERR: " .. msg), ok and 0x008000 or 0x0000FF)
@@ -2576,7 +2583,7 @@ for _, h in ipairs(horseDB) do cmbHr.Items.add(string.format("[%d] %s", h[1], h[
 local btnHr = createButton(frm); btnHr.Left = 400; btnHr.Top = Y - 2; btnHr.Width = 100; btnHr.Height = 24
 btnHr.Caption = "Add Horse"
 btnHr.OnClick = function()
-  if not S.ready then setStatus("Connect first!", 0x0000FF); return end
+  if not S.ready then setStatus("请先连接游戏! [Connect first!]", 0x0000FF); return end
   setStatus("Adding...", 0x008080)
   local ok, msg = addHorse(horseDB[cmbHr.ItemIndex + 1][1])
   setStatus(ok and ("Added: " .. msg) or ("ERR: " .. msg), ok and 0x008000 or 0x0000FF)
@@ -2607,7 +2614,7 @@ local function refreshEqItems()
     return
   end
   if not S.ready or not S.gdc then
-    cmbEqItem.Items.add("(Connect first)")
+    cmbEqItem.Items.add("(请先连接游戏)")
     cmbEqItem.ItemIndex = 0
     return
   end
@@ -2636,7 +2643,7 @@ _refreshEqItemsFn = refreshEqItems
 local btnEq = createButton(frm); btnEq.Left = 410; btnEq.Top = Y - 2; btnEq.Width = 90; btnEq.Height = 24
 btnEq.Caption = "Add Equip"
 btnEq.OnClick = function()
-  if not S.ready then setStatus("Connect first!", 0x0000FF); return end
+  if not S.ready then setStatus("请先连接游戏! [Connect first!]", 0x0000FF); return end
   local dbInfo = equipDBs[cmbEqType.ItemIndex + 1]
   -- Parse real DB index from dropdown text "[35] 软弓" → 35
   local selText = cmbEqItem.Items[cmbEqItem.ItemIndex]
@@ -2664,7 +2671,7 @@ cmbTrRare.ItemIndex = 5
 local btnTr = createButton(frm); btnTr.Left = 360; btnTr.Top = Y - 2; btnTr.Width = 100; btnTr.Height = 24
 btnTr.Caption = "Add Treasure"
 btnTr.OnClick = function()
-  if not S.ready then setStatus("Connect first!", 0x0000FF); return end
+  if not S.ready then setStatus("请先连接游戏! [Connect first!]", 0x0000FF); return end
   local typeIdx = cmbTrType.ItemIndex
   local rareLv = cmbTrRare.ItemIndex
   setStatus(string.format("Gen Treasure type=%d rare=%d", typeIdx, rareLv), 0x008080)
@@ -2680,7 +2687,7 @@ for _, m in ipairs(medDB) do cmbMed.Items.add(string.format("[%d] %s", m[1], m[2
 local btnMed = createButton(frm); btnMed.Left = 400; btnMed.Top = Y - 2; btnMed.Width = 100; btnMed.Height = 24
 btnMed.Caption = "Add Medicine"
 btnMed.OnClick = function()
-  if not S.ready then setStatus("Connect first!", 0x0000FF); return end
+  if not S.ready then setStatus("请先连接游戏! [Connect first!]", 0x0000FF); return end
   setStatus("Adding...", 0x008080)
   local ok, msg = addMedFood(medDB[cmbMed.ItemIndex + 1][1], 0x110)
   setStatus(ok and ("Added: " .. msg) or ("ERR: " .. msg), ok and 0x008000 or 0x0000FF)
@@ -2694,7 +2701,7 @@ for _, f in ipairs(foodDB) do cmbFd.Items.add(string.format("[%d] %s", f[1], f[2
 local btnFd = createButton(frm); btnFd.Left = 400; btnFd.Top = Y - 2; btnFd.Width = 100; btnFd.Height = 24
 btnFd.Caption = "Add Food"
 btnFd.OnClick = function()
-  if not S.ready then setStatus("Connect first!", 0x0000FF); return end
+  if not S.ready then setStatus("请先连接游戏! [Connect first!]", 0x0000FF); return end
   setStatus("Adding...", 0x008080)
   local ok, msg = addMedFood(foodDB[cmbFd.ItemIndex + 1][1], 0x118)
   setStatus(ok and ("Added: " .. msg) or ("ERR: " .. msg), ok and 0x008000 or 0x0000FF)
