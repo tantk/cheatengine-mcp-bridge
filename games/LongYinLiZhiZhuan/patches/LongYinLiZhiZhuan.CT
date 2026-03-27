@@ -2565,6 +2565,7 @@ btnBook.Caption = "Add Book"
 btnBook.OnClick = function()
   if not S.ready then setStatus("请先连接游戏! [Connect first!]", 0x0000FF); return end
   local sid = edtID.Text ~= "" and tonumber(edtID.Text) or skillDB[cmbSk.ItemIndex + 1][1]
+  log(string.format("BTN AddBook: skillID=%d", sid))
   setStatus("Adding...", 0x008080)
   local ok, msg = addBook(sid, 5)
   setStatus(ok and ("Added: " .. msg) or ("ERR: " .. msg), ok and 0x008000 or 0x0000FF)
@@ -2582,6 +2583,7 @@ local btnMat = createButton(frm); btnMat.Left = 400; btnMat.Top = Y - 2; btnMat.
 btnMat.Caption = "Add Material"
 btnMat.OnClick = function()
   if not S.ready then setStatus("请先连接游戏! [Connect first!]", 0x0000FF); return end
+  log(string.format("BTN AddMaterial: type=%d lv=%d", cmbMT.ItemIndex, cmbML.ItemIndex))
   setStatus("Adding...", 0x008080)
   local ok, msg = addMaterial(cmbMT.ItemIndex, cmbML.ItemIndex, 5)
   setStatus(ok and ("Added: " .. msg) or ("ERR: " .. msg), ok and 0x008000 or 0x0000FF)
@@ -2596,6 +2598,7 @@ local btnHr = createButton(frm); btnHr.Left = 400; btnHr.Top = Y - 2; btnHr.Widt
 btnHr.Caption = "Add Horse"
 btnHr.OnClick = function()
   if not S.ready then setStatus("请先连接游戏! [Connect first!]", 0x0000FF); return end
+  log(string.format("BTN AddHorse: idx=%d", horseDB[cmbHr.ItemIndex + 1][1]))
   setStatus("Adding...", 0x008080)
   local ok, msg = addHorse(horseDB[cmbHr.ItemIndex + 1][1])
   setStatus(ok and ("Added: " .. msg) or ("ERR: " .. msg), ok and 0x008000 or 0x0000FF)
@@ -2657,15 +2660,13 @@ btnEq.Caption = "Add Equip"
 btnEq.OnClick = function()
   if not S.ready then setStatus("请先连接游戏! [Connect first!]", 0x0000FF); return end
   local dbInfo = equipDBs[cmbEqType.ItemIndex + 1]
-  -- Parse real DB index from dropdown text "[35] 软弓" → 35
   local selText = cmbEqItem.Items[cmbEqItem.ItemIndex]
   local idx = tonumber(selText and selText:match("^%[(%d+)%]")) or cmbEqItem.ItemIndex
-  local rareLv = cmbEqRare.ItemIndex  -- 0-5 maps directly to rarity
+  local rareLv = cmbEqRare.ItemIndex
+  log(string.format("BTN AddEquip: type=%s item='%s' idx=%d rare=%d RVA=%X", dbInfo.name, selText or "?", idx, rareLv, dbInfo.genRVA))
   setStatus(string.format("Gen %s [%d] rarity=%d", dbInfo.name, idx, rareLv), 0x008080)
   local ok, msg = addEquipGenerated(dbInfo.genRVA, idx, rareLv, 1.0)
-  if not ok then
-    setStatus("Generator failed: " .. tostring(msg), 0x0000FF)
-  end
+  log(string.format("BTN AddEquip result: ok=%s msg=%s", tostring(ok), tostring(msg)))
   setStatus(ok and ("Added: " .. msg) or ("ERR: " .. msg), ok and 0x008000 or 0x0000FF)
 end
 Y = Y + 32
@@ -2686,6 +2687,8 @@ btnTr.OnClick = function()
   if not S.ready then setStatus("请先连接游戏! [Connect first!]", 0x0000FF); return end
   local typeIdx = cmbTrType.ItemIndex
   local rareLv = cmbTrRare.ItemIndex
+  local trText = cmbTrType.Items[typeIdx]
+  log(string.format("BTN AddTreasure: type=%d '%s' rare=%d", typeIdx, trText or "?", rareLv))
   setStatus(string.format("Gen Treasure type=%d rare=%d", typeIdx, rareLv), 0x008080)
   local ok, msg = addTreasure(typeIdx, rareLv)
   setStatus(ok and ("Added: " .. msg) or ("ERR: " .. msg), ok and 0x008000 or 0x0000FF)
@@ -2700,6 +2703,7 @@ local btnMed = createButton(frm); btnMed.Left = 400; btnMed.Top = Y - 2; btnMed.
 btnMed.Caption = "Add Medicine"
 btnMed.OnClick = function()
   if not S.ready then setStatus("请先连接游戏! [Connect first!]", 0x0000FF); return end
+  log(string.format("BTN AddMed: dbIdx=%d", medDB[cmbMed.ItemIndex + 1][1]))
   setStatus("Adding...", 0x008080)
   local ok, msg = addMedFood(medDB[cmbMed.ItemIndex + 1][1], 0x110)
   setStatus(ok and ("Added: " .. msg) or ("ERR: " .. msg), ok and 0x008000 or 0x0000FF)
@@ -2714,6 +2718,7 @@ local btnFd = createButton(frm); btnFd.Left = 400; btnFd.Top = Y - 2; btnFd.Widt
 btnFd.Caption = "Add Food"
 btnFd.OnClick = function()
   if not S.ready then setStatus("请先连接游戏! [Connect first!]", 0x0000FF); return end
+  log(string.format("BTN AddFood: dbIdx=%d", foodDB[cmbFd.ItemIndex + 1][1]))
   setStatus("Adding...", 0x008080)
   local ok, msg = addMedFood(foodDB[cmbFd.ItemIndex + 1][1], 0x118)
   setStatus(ok and ("Added: " .. msg) or ("ERR: " .. msg), ok and 0x008000 or 0x0000FF)
