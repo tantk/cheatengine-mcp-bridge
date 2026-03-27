@@ -2811,11 +2811,20 @@ _ia_hookInstalled = nil
 -- Shared IL2CPP Init (replaces LaunchMonoDataCollector)
 -- Called once per session, results cached globally.
 -- ============================================================
+-- Known game version: update these when game updates and RVAs are re-resolved
+local KNOWN_GA_SIZE = 36167680  -- GameAssembly.dll size for version f8
+
 function _il2cpp_init()
   if _il2cppCache then return _il2cppCache end
 
   local pid = getOpenedProcessID()
   if not pid or pid == 0 then error("请先用CE连接游戏 [Attach CE to game first]") end
+
+  -- Version check: detect if game updated since RVAs were last resolved
+  local gaSize = getModuleSize("GameAssembly.dll")
+  if gaSize and gaSize ~= KNOWN_GA_SIZE then
+    error(string.format("游戏版本不匹配! GA大小: %d (预期: %d) — 需要更新RVA [Game version mismatch — RVAs need update]", gaSize, KNOWN_GA_SIZE))
+  end
 
   -- Validate ALL il2cpp exports upfront to prevent nearby allocation popup
   local exports = {
