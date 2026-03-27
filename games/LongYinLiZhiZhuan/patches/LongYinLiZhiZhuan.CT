@@ -1412,15 +1412,11 @@ local function allocWorkArea()
     if _ia_relayCode then pcall(deAlloc, _ia_relayCode); _ia_relayCode = nil end
   end
   sleep(100) -- drain any in-flight Update before freeing hook memory
+  -- Only unregister symbols, NEVER dealloc — stale addresses from a previous
+  -- game session can point to valid memory in the new process, and freeing
+  -- them crashes the game. The old memory is already gone with the old process.
   for _, n in ipairs({"cmdBuf","hookCode","origUpdatePtr","wkCode","wkData","wkStr"}) do
-    pcall(function()
-      local addr = getAddress(n)
-      if addr and addr > 0x10000 then
-        autoAssemble("unregistersymbol("..n..")\ndealloc("..n..")")
-      else
-        pcall(function() autoAssemble("unregistersymbol("..n..")") end)
-      end
-    end)
+    pcall(function() autoAssemble("unregistersymbol("..n..")") end)
   end
   local ok = autoAssemble([[
 alloc(wkCode, 512)
