@@ -2414,7 +2414,19 @@ local function addEquipGenerated(genRVA, dbIndex, bossLv, qualityRate, timeout)
     sleep(16)
     elapsed = elapsed + 16
   end
-  return false, "Generator timeout"
+  -- Timeout: dump full cmdBuf state for diagnosis
+  local dCmd = readInteger(S.cmdBuf) or -1
+  local dStatus = readInteger(S.cmdBuf + 0x04) or -1
+  local dResult = readQword(S.cmdBuf + 0x08) or 0
+  local dGC = readQword(S.cmdBuf + 0x20) or 0
+  local dGate = readInteger(S.cmdBuf + 0x38) or -1
+  local dHB = readInteger(S.cmdBuf + 0x40) or -1
+  local dFunc = readQword(S.cmdBuf + 0x68) or 0
+  local dump = string.format(
+    "TIMEOUT DUMP: cmd=%d status=%d result=%s gc=%s gate=%d heartbeat=%d func=%s",
+    dCmd, dStatus, toHex(dResult), toHex(dGC), dGate, dHB, toHex(dFunc))
+  log(dump)
+  return false, dump
 end
 
 local function addEquipment(dbOff, dbIndex, desiredLv, desiredRare)
