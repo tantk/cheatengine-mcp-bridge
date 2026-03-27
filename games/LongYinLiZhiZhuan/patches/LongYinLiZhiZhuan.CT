@@ -1540,6 +1540,18 @@ local function installMainThreadHook()
   else
     -- No Harmony/BepInEx. Use short 5-byte E9 JMP to hookCode (allocated near GameAssembly).
     -- Only save bytes up to the first instruction boundary >= 5 — avoids RIP-relative relocation.
+    -- Check if Update is already E9-patched from a previous CE session (orphaned hook)
+    if b1 == 0xE9 then
+      log("WARNING: Update already has E9 patch from previous session — reading past it")
+      -- Decode the old E9 to find original code: E9 rel32 → target has saved bytes + JMP back
+      local oldRel32 = readInteger(updateCodeAddr + 1)
+      if oldRel32 >= 0x80000000 then oldRel32 = oldRel32 - 0x100000000 end
+      local oldTarget = updateCodeAddr + 5 + oldRel32
+      -- The old hookCode at oldTarget starts with push rax; push rbx; ... and ends with jmp [origUpdatePtr]
+      -- The old relay trampoline has the ORIGINAL bytes. But we can't easily find it.
+      -- Safest: restore original bytes by reading them from game file, or just error out.
+      return false, "请重启游戏 - Update已被旧Hook修改 [Restart game - stale hook detected]"
+    end
     log("No Harmony trampoline — will patch code entry directly")
     harmonyPtrSlot = nil
     _ia_directPatch = true
