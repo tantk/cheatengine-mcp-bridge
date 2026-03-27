@@ -1463,7 +1463,7 @@ local function installMainThreadHook()
   if hookInstalled then return true end
   log("installMainThreadHook start (pointer-swap)")
   local base = getAddress("GameAssembly.dll")
-  if not base or base == 0 then return false, "GameAssembly.dll not loaded" end
+  if not base or base < 0x100000 then return false, "GameAssembly.dll not loaded (base=" .. tostring(base) .. ")" end
   local modSize = getModuleSize("GameAssembly.dll") or 0x10000000
 
   -- Resolve AOBs (restrict to GameAssembly.dll range)
@@ -1672,9 +1672,10 @@ local function installMainThreadHook()
 
   _ia_getItemPtr = getItemPtr
 
+  -- Use hex address instead of module name to avoid stale symbol resolution
   local aa = string.format([[
 alloc(cmdBuf, 256)
-alloc(hookCode, 2048, GameAssembly.dll)
+alloc(hookCode, 2048, ]] .. string.format("%X", base) .. [[)
 alloc(origUpdatePtr, 8)
 registersymbol(cmdBuf)
 registersymbol(hookCode)
