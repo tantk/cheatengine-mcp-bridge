@@ -2798,12 +2798,20 @@ function _il2cpp_init()
 
   local pid = getOpenedProcessID()
   if not pid or pid == 0 then error("请先用CE连接游戏 [Attach CE to game first]") end
-  local ga = getAddress("GameAssembly.dll")
-  if not ga or ga < 0x100000 then error("未找到GameAssembly.dll [Attach CE to game first]") end
-  local domainGetAddr = getAddress("GameAssembly.il2cpp_domain_get")
-  if not domainGetAddr or domainGetAddr < 0x100000 then error("IL2CPP导出未找到 [Game not ready, load a save]") end
 
-  -- Minimal il2cpp calls using snapshot offsets (f7.8)
+  -- Validate ALL il2cpp exports upfront to prevent nearby allocation popup
+  local exports = {
+    domainGet = getAddress("GameAssembly.il2cpp_domain_get"),
+    domainGetAsm = getAddress("GameAssembly.il2cpp_domain_get_assemblies"),
+    asmGetImage = getAddress("GameAssembly.il2cpp_assembly_get_image"),
+    classFromName = getAddress("GameAssembly.il2cpp_class_from_name"),
+  }
+  for name, addr in pairs(exports) do
+    if not addr or addr < 0x100000 then
+      error("请先连接游戏并加载存档 [Attach to game and load a save first]")
+    end
+  end
+
   local OFFSETS = {
     gc_inst = 0x0,
     gdc_inst = 0x20,
@@ -2812,18 +2820,17 @@ function _il2cpp_init()
     bc_inst = 0x50,
   }
 
-  -- Step 1: Get Assembly-CSharp image (3 calls: domain, assemblies, image)
-  local domain = executeCodeEx(0, nil, domainGetAddr)
-  if not domain or domain == 0 then error("il2cpp_domain_get failed - is game loaded?") end
+  -- Step 1: Get Assembly-CSharp image (3 calls)
+  local domain = executeCodeEx(0, nil, exports.domainGet)
+  if not domain or domain == 0 then error("il2cpp_domain_get failed") end
   local sizePtr = allocateMemory(8); writeQword(sizePtr, 0)
-  local arr = executeCodeEx(0, nil, getAddress("GameAssembly.il2cpp_domain_get_assemblies"), domain, sizePtr)
+  local arr = executeCodeEx(0, nil, exports.domainGetAsm, domain, sizePtr)
   local count = readInteger(sizePtr); deAlloc(sizePtr)
-  -- Assembly-CSharp is always last
   local asmPtr = readQword(arr + (count - 1) * 8)
-  local img = executeCodeEx(0, nil, getAddress("GameAssembly.il2cpp_assembly_get_image"), asmPtr)
+  local img = executeCodeEx(0, nil, exports.asmGetImage, asmPtr)
 
-  -- Step 2: Find classes (1 call each, reuse allocated strings)
-  local cfn = getAddress("GameAssembly.il2cpp_class_from_name")
+  -- Step 2: Find classes (1 call each)
+  local cfn = exports.classFromName
   local ns = allocateMemory(16); writeString(ns, "")
   local cn = allocateMemory(64)
   local function findClass(name)
