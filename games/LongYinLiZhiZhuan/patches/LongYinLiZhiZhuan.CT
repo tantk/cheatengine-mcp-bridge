@@ -2213,8 +2213,9 @@ local treasureTypes = {
 local function addTreasure(typeIdx, rareLv, timeout)
   if not S.ready or not S.cmdBuf then return false, "Connect first" end
   timeout = timeout or 3000
-  writeInteger(S.cmdBuf + 0x10, rareLv)
-  writeInteger(S.cmdBuf + 0x14, typeIdx)
+  -- edx=typeIdx, r8d=rareLv (same swap pattern as GenerateWeapon)
+  writeInteger(S.cmdBuf + 0x10, typeIdx)
+  writeInteger(S.cmdBuf + 0x14, rareLv)
   writeFloat(S.cmdBuf + 0x18, 1.0)
   writeQword(S.cmdBuf + 0x68, S.base + TREASURE_GEN_RVA)
   writeInteger(S.cmdBuf + 0x04, 0)
