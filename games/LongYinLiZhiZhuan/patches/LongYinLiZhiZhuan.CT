@@ -2791,7 +2791,9 @@ function _il2cpp_init()
   if _il2cppCache then return _il2cppCache end
 
   local pid = getOpenedProcessID()
-  if not pid or pid == 0 then error("Game not running") end
+  if not pid or pid == 0 then error("请先用CE连接游戏 [Attach CE to game first]") end
+  local ga = getAddress("GameAssembly.dll")
+  if not ga or ga == 0 then error("未找到GameAssembly.dll [Game not fully loaded]") end
 
   -- Minimal il2cpp calls using snapshot offsets (f7.8)
   -- Static field offsets from snapshot — hardcoded to avoid field enumeration
