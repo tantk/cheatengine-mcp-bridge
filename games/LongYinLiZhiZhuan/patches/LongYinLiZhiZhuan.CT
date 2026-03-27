@@ -2191,10 +2191,12 @@ local EQUIP_GEN_RVA = {
 
 -- DB offsets on GDC: weapon=0xF0, armor=0xF8, helmet=0x100, shoes=0x108
 local equipDBs = {
-  {name="Weapon",  off=0xF0,  genRVA=0x7A73C0},
-  {name="Armor",   off=0xF8,  genRVA=0x795B70},
-  {name="Helmet",  off=0x100, genRVA=0x79A490},
-  {name="Shoes",   off=0x108, genRVA=0x7A5480},
+  {name="Weapon",     off=0xF0,  genRVA=0x7A73C0},
+  {name="Armor",      off=0xF8,  genRVA=0x795B70},
+  {name="Helmet",     off=0x100, genRVA=0x79A490},
+  {name="Shoes",      off=0x108, genRVA=0x7A5480},
+  {name="Accessory",  off=nil,   genRVA=0x797A70,
+   staticItems={"香囊 Sachet","羽扇 Fan","扳指 Ring","玉佩 Pendant","腰带 Belt","面具 Mask"}},
 }
 
 -- Call game's Generate[Equip] on main thread via cmdBuf cmd=4.
@@ -2422,6 +2424,14 @@ cmbEqRare.ItemIndex = 5
 local function refreshEqItems()
   cmbEqItem.Items.clear()
   local dbInfo = equipDBs[cmbEqType.ItemIndex + 1]
+  if dbInfo.staticItems then
+    -- Accessories/decorations: fixed type list, no database needed
+    for i, name in ipairs(dbInfo.staticItems) do
+      cmbEqItem.Items.add(string.format("[%d] %s", i - 1, name))
+    end
+    cmbEqItem.ItemIndex = 0
+    return
+  end
   if not S.ready or not S.gdc then
     cmbEqItem.Items.add("(Connect first)")
     cmbEqItem.ItemIndex = 0
