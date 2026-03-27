@@ -139,14 +139,11 @@ MCP_SERVER_NAME = "cheatengine"
 # ============================================================================
 
 class CEBridgeClient:
-    PIPE_TIMEOUT_MS = 30000  # 30 second timeout for pipe reads
-
     def __init__(self):
         self.handle = None
-        self.overlapped = None
 
     def connect(self):
-        """Attempts to connect to the CE Named Pipe with overlapped I/O."""
+        """Attempts to connect to the CE Named Pipe."""
         try:
             self.handle = win32file.CreateFile(
                 PIPE_NAME,
@@ -154,42 +151,15 @@ class CEBridgeClient:
                 0,
                 None,
                 win32file.OPEN_EXISTING,
-                win32file.FILE_FLAG_OVERLAPPED,
+                0,
                 None
             )
-            self.overlapped = pywintypes.OVERLAPPED()
-            self.overlapped.hEvent = win32event.CreateEvent(None, True, False, None)
             return True
         except pywintypes.error:
             return False
 
-    def _read_with_timeout(self, nbytes):
-        """Read from pipe with timeout. Returns bytes or raises on timeout/error."""
-        win32event.ResetEvent(self.overlapped.hEvent)
-        try:
-            hr, data = win32file.ReadFile(self.handle, nbytes, self.overlapped)
-        except pywintypes.error as e:
-            raise ConnectionError(f"ReadFile start failed: {e}")
-
-        if hr == 0:
-            # Completed immediately
-            return bytes(data)
-
-        # hr == winerror.ERROR_IO_PENDING — wait with timeout
-        rc = win32event.WaitForSingleObject(self.overlapped.hEvent, self.PIPE_TIMEOUT_MS)
-        if rc == win32event.WAIT_OBJECT_0:
-            nbytesRead = win32file.GetOverlappedResult(self.handle, self.overlapped, True)
-            return bytes(data[:nbytesRead])
-        else:
-            # Timeout — cancel the pending I/O and raise
-            try:
-                win32file.CancelIo(self.handle)
-            except:
-                pass
-            raise ConnectionError(f"CE pipe read timed out after {self.PIPE_TIMEOUT_MS}ms")
-
     def send_command(self, method, params=None):
-        """Send command to CE Bridge with auto-reconnection and timeout."""
+        """Send command to CE Bridge with auto-reconnection on failure."""
         max_retries = 2
         last_error = None
 
@@ -209,12 +179,10 @@ class CEBridgeClient:
                 req_json = json.dumps(request).encode('utf-8')
                 header = struct.pack('<I', len(req_json))
 
-                win32file.WriteFile(self.handle, header, self.overlapped)
-                win32event.WaitForSingleObject(self.overlapped.hEvent, 5000)
-                win32file.WriteFile(self.handle, req_json, self.overlapped)
-                win32event.WaitForSingleObject(self.overlapped.hEvent, 5000)
+                win32file.WriteFile(self.handle, header)
+                win32file.WriteFile(self.handle, req_json)
 
-                resp_header_buffer = self._read_with_timeout(4)
+                resp_header_buffer = win32file.ReadFile(self.handle, 4)[1]
                 if len(resp_header_buffer) < 4:
                     self.close()
                     last_error = ConnectionError("Incomplete response header from CE.")
@@ -226,7 +194,7 @@ class CEBridgeClient:
                     self.close()
                     raise ConnectionError(f"Response too large: {resp_len} bytes")
 
-                resp_body_buffer = self._read_with_timeout(resp_len)
+                resp_body_buffer = win32file.ReadFile(self.handle, resp_len)[1]
 
                 try:
                     response = json.loads(resp_body_buffer.decode('utf-8'))
@@ -247,23 +215,12 @@ class CEBridgeClient:
                 last_error = ConnectionError(f"Pipe Communication failed: {e}")
                 if attempt < max_retries - 1:
                     continue
-            except ConnectionError as e:
-                self.close()
-                last_error = e
-                if attempt < max_retries - 1:
-                    continue
 
         if last_error:
             raise last_error
         raise ConnectionError("Unknown communication error")
 
     def close(self):
-        if self.overlapped and self.overlapped.hEvent:
-            try:
-                win32file.CloseHandle(self.overlapped.hEvent)
-            except:
-                pass
-            self.overlapped = None
         if self.handle:
             try:
                 win32file.CloseHandle(self.handle)
