@@ -1095,6 +1095,39 @@ end
           <Color>008000</Color>
           <CheatEntries>
             <CheatEntry>
+              <ID>1001</ID>
+              <Description>"Battle Speed Boost"</Description>
+              <Color>000000</Color>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript><![CDATA[[ENABLE]
+{$lua}
+if syntaxcheck then return end
+local wd = _getWorldData()
+if not wd then error("WorldData null") end
+local cur = readFloat(wd + 0x1D0)
+local input = InputQuery("Battle Speed", string.format("Current: %.0fx. Enter new speed (1-100):", cur), "50")
+if not input then print("[Battle] Cancelled"); return end
+local val = tonumber(input) or 50
+if val > 100 then val = 100 end
+if val < 1 then val = 1 end
+_battleSpeedOrig = cur
+writeFloat(wd + 0x1D0, val)
+print(string.format("[Battle] Speed: %.0fx -> %.0fx", cur, val))
+{$asm}
+
+[DISABLE]
+{$lua}
+if syntaxcheck then return end
+if _battleSpeedOrig then
+  local wd = _getWorldData()
+  if wd then writeFloat(wd + 0x1D0, _battleSpeedOrig) end
+  print(string.format("[Battle] Restored to %.0fx", _battleSpeedOrig))
+  _battleSpeedOrig = nil
+end
+{$asm}
+]]></AssemblerScript>
+            </CheatEntry>
+            <CheatEntry>
               <ID>1000</ID>
               <Description>"One-Hit KO (set all enemies to 1 HP)"</Description>
               <Color>000000</Color>
