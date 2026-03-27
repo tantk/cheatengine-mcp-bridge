@@ -1114,9 +1114,14 @@ if _battleSpeedTimer then _battleSpeedTimer.destroy() end
 _battleSpeedTimer = createTimer(nil)
 _battleSpeedTimer.Interval = 50
 _battleSpeedTimer.OnTimer = function()
+  local pid = getOpenedProcessID()
+  if not pid or pid == 0 then
+    _battleSpeedTimer.Enabled = false
+    return
+  end
   local ok, wd = pcall(_getWorldData)
   if ok and wd then
-    writeFloat(wd + 0x1D0, _battleSpeedVal)
+    pcall(writeFloat, wd + 0x1D0, _battleSpeedVal)
   end
 end
 _battleSpeedTimer.Enabled = true
