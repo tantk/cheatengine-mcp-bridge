@@ -1,23 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
 <CheatTable>
-  <CheatTableName>LongYinLiZhiZhuan All-in-One v6 (direct il2cpp)</CheatTableName>
+  <CheatTableName>龙胤立志传 修改器 v6 / LongYinLiZhiZhuan Trainer v6</CheatTableName>
   <CheatEntries>
     <CheatEntry>
       <ID>0</ID>
-      <Description>"LongYinLiZhiZhuan - Attach to game first, then enable cheats"</Description>
+      <Description>"龙胤立志传 - 先连接游戏再启用修改 [Attach to game first]"</Description>
       <GroupHeader>1</GroupHeader>
       <Color>FF0000</Color>
       <CheatEntries>
 
         <CheatEntry>
           <ID>10</ID>
-          <Description>"--- Resources ---"</Description>
+          <Description>"--- 资源 [Resources] ---"</Description>
           <GroupHeader>1</GroupHeader>
           <Color>008000</Color>
           <CheatEntries>
             <CheatEntry>
               <ID>700</ID>
-              <Description>"Set Money (Silver)"</Description>
+              <Description>"设置银两 [Money]"</Description>
               <Color>000000</Color>
               <VariableType>Auto Assembler Script</VariableType>
               <AssemblerScript>
@@ -47,7 +47,7 @@ print("[Money] (value remains as set)")
             </CheatEntry>
             <CheatEntry>
               <ID>1200</ID>
-              <Description>"Max Carry Weight (no inventory limit)"</Description>
+              <Description>"负重上限最大化 [Max Weight]"</Description>
               <Color>000000</Color>
               <VariableType>Auto Assembler Script</VariableType>
               <AssemblerScript>
@@ -85,7 +85,7 @@ end
             </CheatEntry>
             <CheatEntry>
               <ID>1300</ID>
-              <Description>"Max Rarity All Inventory Items"</Description>
+              <Description>"物品品质全满 [Max Rarity]"</Description>
               <Color>000000</Color>
               <VariableType>Auto Assembler Script</VariableType>
               <AssemblerScript>
@@ -125,7 +125,7 @@ print("[Rarity] (values remain as set)")
             </CheatEntry>
             <CheatEntry>
               <ID>600</ID>
-              <Description>"Set Sect Currency (forceContribution)"</Description>
+              <Description>"设置门派贡献 [Sect Currency]"</Description>
               <Color>000000</Color>
               <VariableType>Auto Assembler Script</VariableType>
               <AssemblerScript>
@@ -156,13 +156,13 @@ print("[SectCurrency] (value remains as set)")
 
         <CheatEntry>
           <ID>20</ID>
-          <Description>"--- Talents (TianFu) ---"</Description>
+          <Description>"--- 天赋 [Talents] ---"</Description>
           <GroupHeader>1</GroupHeader>
           <Color>008000</Color>
           <CheatEntries>
             <CheatEntry>
               <ID>300</ID>
-              <Description>"Max Talent Slots (9 -> 99)"</Description>
+              <Description>"天赋槽位上限99 [Max Talent Slots]"</Description>
               <Color>000000</Color>
               <VariableType>Auto Assembler Script</VariableType>
               <AssemblerScript>
@@ -241,7 +241,7 @@ end
             </CheatEntry>
             <CheatEntry>
               <ID>500</ID>
-              <Description>"Set Talent Points (heroTagPoint)"</Description>
+              <Description>"设置天赋点 [Talent Points]"</Description>
               <Color>000000</Color>
               <VariableType>Auto Assembler Script</VariableType>
               <AssemblerScript>
@@ -269,7 +269,7 @@ print("[TalentPt] (value remains as set)")
             </CheatEntry>
             <CheatEntry>
               <ID>501</ID>
-              <Description>"Sect-Wide: Set Talent Points + Max Slots"</Description>
+              <Description>"全门派天赋点+槽位 [Sect-Wide Talents]"</Description>
               <Color>000000</Color>
               <VariableType>Auto Assembler Script</VariableType>
               <AssemblerScript>
@@ -440,13 +440,13 @@ print("[SectTalent] Disabled (talent points remain as set)")
 
         <CheatEntry>
           <ID>30</ID>
-          <Description>"--- Skills ---"</Description>
+          <Description>"--- 武学 [Skills] ---"</Description>
           <GroupHeader>1</GroupHeader>
           <Color>008000</Color>
           <CheatEntries>
             <CheatEntry>
               <ID>800</ID>
-              <Description>"Max Skill Learn Limits (all tiers -> 99)"</Description>
+              <Description>"武学学习上限99 [Max Skill Limits]"</Description>
               <Color>000000</Color>
               <VariableType>Auto Assembler Script</VariableType>
               <AssemblerScript>
@@ -492,7 +492,7 @@ end
             </CheatEntry>
             <CheatEntry>
               <ID>400</ID>
-              <Description>"WuXueTianCai Buff - Combat Skill EXP Rate (default 30%)"</Description>
+              <Description>"武学天才-战斗经验加成 [Combat EXP Buff]"</Description>
               <Color>000000</Color>
               <VariableType>Auto Assembler Script</VariableType>
               <AssemblerScript>
@@ -551,7 +551,7 @@ end
             </CheatEntry>
             <CheatEntry>
               <ID>401</ID>
-              <Description>"BoXueDuoCai Buff - Non-Combat Skill EXP Rate (default 30%)"</Description>
+              <Description>"博学多才-生活经验加成 [Living EXP Buff]"</Description>
               <Color>000000</Color>
               <VariableType>Auto Assembler Script</VariableType>
               <AssemblerScript>
@@ -609,13 +609,13 @@ end
 
         <CheatEntry>
           <ID>50</ID>
-          <Description>"--- Health ---"</Description>
+          <Description>"--- 生命 [Health] ---"</Description>
           <GroupHeader>1</GroupHeader>
           <Color>008000</Color>
           <CheatEntries>
             <CheatEntry>
               <ID>900</ID>
-              <Description>"Restore HP to Max"</Description>
+              <Description>"回满气血 [Restore HP]"</Description>
               <Color>000000</Color>
               <VariableType>Auto Assembler Script</VariableType>
               <AssemblerScript>
@@ -639,7 +639,7 @@ print("[HP] (value remains as set)")
             </CheatEntry>
             <CheatEntry>
               <ID>901</ID>
-              <Description>"Clear All Injuries (external/internal/poison)"</Description>
+              <Description>"清除所有伤势 [Clear Injuries]"</Description>
               <Color>000000</Color>
               <VariableType>Auto Assembler Script</VariableType>
               <AssemblerScript>
@@ -670,13 +670,13 @@ print("[Injury] (values remain as set)")
 
         <CheatEntry>
           <ID>70</ID>
-          <Description>"--- Reputation ---"</Description>
+          <Description>"--- 声望 [Reputation] ---"</Description>
           <GroupHeader>1</GroupHeader>
           <Color>008000</Color>
           <CheatEntries>
             <CheatEntry>
               <ID>1100</ID>
-              <Description>"Max All NPC Favor (everyone likes you)"</Description>
+              <Description>"NPC好感全满 [Max Favor]"</Description>
               <Color>000000</Color>
               <VariableType>Auto Assembler Script</VariableType>
               <AssemblerScript>
@@ -709,7 +709,7 @@ print("[Favor] (values remain as set)")
             </CheatEntry>
             <CheatEntry>
               <ID>1101</ID>
-              <Description>"Set Fame / Clear Bad Fame"</Description>
+              <Description>"设置声望/清除恶名 [Fame]"</Description>
               <Color>000000</Color>
               <VariableType>Auto Assembler Script</VariableType>
               <AssemblerScript>
@@ -739,7 +739,7 @@ print("[Fame] (values remain as set)")
             </CheatEntry>
             <CheatEntry>
               <ID>1102</ID>
-              <Description>"Set Contribution to Other Factions (shop exchange)"</Description>
+              <Description>"设置外门贡献 [Faction Contribution]"</Description>
               <Color>000000</Color>
               <VariableType>Auto Assembler Script</VariableType>
               <AssemblerScript>
@@ -778,7 +778,7 @@ print("[OutContrib] (values remain as set)")
             </CheatEntry>
             <CheatEntry>
               <ID>1103</ID>
-              <Description>"Set Faction Affinity (all factions love your sect)"</Description>
+              <Description>"门派好感度全满 [Faction Affinity]"</Description>
               <Color>000000</Color>
               <VariableType>Auto Assembler Script</VariableType>
               <AssemblerScript><![CDATA[[ENABLE]
@@ -855,13 +855,13 @@ print("[ForceFavor] (values remain as set)")
 
         <CheatEntry>
           <ID>75</ID>
-          <Description>"--- Sect Resources ---"</Description>
+          <Description>"--- 门派资源 [Sect Resources] ---"</Description>
           <GroupHeader>1</GroupHeader>
           <Color>008000</Color>
           <CheatEntries>
             <CheatEntry>
               <ID>1104</ID>
-              <Description>"Max Sect Resources (fill to storage cap)"</Description>
+              <Description>"门派资源填满 [Max Resources]"</Description>
               <Color>000000</Color>
               <VariableType>Auto Assembler Script</VariableType>
               <AssemblerScript><![CDATA[[ENABLE]
@@ -913,13 +913,13 @@ print("[Resource] (values remain as set)")
 
         <CheatEntry>
           <ID>95</ID>
-          <Description>"--- Research ---"</Description>
+          <Description>"--- 科研 [Research] ---"</Description>
           <GroupHeader>1</GroupHeader>
           <Color>008000</Color>
           <CheatEntries>
             <CheatEntry>
               <ID>1410</ID>
-              <Description>"Instant Complete Current Research"</Description>
+              <Description>"瞬间完成当前研究 [Instant Research]"</Description>
               <Color>000000</Color>
               <VariableType>Auto Assembler Script</VariableType>
               <AssemblerScript><![CDATA[[ENABLE]
@@ -977,13 +977,13 @@ print("[Research] (toggle again to complete next research)")
 
         <CheatEntry>
           <ID>90</ID>
-          <Description>"--- Buildings ---"</Description>
+          <Description>"--- 建筑 [Buildings] ---"</Description>
           <GroupHeader>1</GroupHeader>
           <Color>008000</Color>
           <CheatEntries>
             <CheatEntry>
               <ID>1400</ID>
-              <Description>"Instant Complete All Buildings (build/upgrade/destroy)"</Description>
+              <Description>"瞬间完成所有建筑 [Instant Build]"</Description>
               <Color>000000</Color>
               <VariableType>Auto Assembler Script</VariableType>
               <AssemblerScript>
@@ -1043,13 +1043,13 @@ print("[Building] (toggle again to complete new constructions)")
 
         <CheatEntry>
           <ID>96</ID>
-          <Description>"--- Travel ---"</Description>
+          <Description>"--- 旅行 [Travel] ---"</Description>
           <GroupHeader>1</GroupHeader>
           <Color>008000</Color>
           <CheatEntries>
             <CheatEntry>
               <ID>1420</ID>
-              <Description>"Boost Horse Speed (world map travel)"</Description>
+              <Description>"马匹加速 [Horse Speed]"</Description>
               <Color>000000</Color>
               <VariableType>Auto Assembler Script</VariableType>
               <AssemblerScript><![CDATA[[ENABLE]
@@ -1090,13 +1090,13 @@ end
 
         <CheatEntry>
           <ID>60</ID>
-          <Description>"--- Battle ---"</Description>
+          <Description>"--- 战斗 [Battle] ---"</Description>
           <GroupHeader>1</GroupHeader>
           <Color>008000</Color>
           <CheatEntries>
             <CheatEntry>
               <ID>1001</ID>
-              <Description>"Battle Speed Boost (continuous)"</Description>
+              <Description>"战斗加速 [Battle Speed]"</Description>
               <Color>000000</Color>
               <VariableType>Auto Assembler Script</VariableType>
               <AssemblerScript><![CDATA[[ENABLE]
@@ -1143,7 +1143,7 @@ print("[Battle] Speed timer stopped, restored to 1x")
             </CheatEntry>
             <CheatEntry>
               <ID>1000</ID>
-              <Description>"One-Hit KO (set all enemies to 1 HP)"</Description>
+              <Description>"一击必杀 [One-Hit KO]"</Description>
               <Color>000000</Color>
               <VariableType>Auto Assembler Script</VariableType>
               <AssemblerScript>
@@ -1208,13 +1208,13 @@ print("[Battle] (toggle again to use in next fight)")
 
         <CheatEntry>
           <ID>40</ID>
-          <Description>"--- Stats ---"</Description>
+          <Description>"--- 属性 [Stats] ---"</Description>
           <GroupHeader>1</GroupHeader>
           <Color>008000</Color>
           <CheatEntries>
             <CheatEntry>
               <ID>200</ID>
-              <Description>"Set Stat Caps (all skills/attributes)"</Description>
+              <Description>"属性上限提升 [Stat Caps]"</Description>
               <Color>000000</Color>
               <VariableType>Auto Assembler Script</VariableType>
               <AssemblerScript>
@@ -1263,13 +1263,13 @@ print("[StatCap] (values remain as set)")
 
         <CheatEntry>
           <ID>80</ID>
-          <Description>"--- Item Adder (Connect to Game first) ---"</Description>
+          <Description>"--- 物品添加器 [Item Adder] ---"</Description>
           <GroupHeader>1</GroupHeader>
           <Color>FF8000</Color>
           <CheatEntries>
             <CheatEntry>
               <ID>1500</ID>
-              <Description>"Open Item Adder GUI (tick to open)"</Description>
+              <Description>"打开物品添加器 [Open Item Adder]"</Description>
               <Color>000000</Color>
               <VariableType>Auto Assembler Script</VariableType>
               <AssemblerScript><![CDATA[[ENABLE]
