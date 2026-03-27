@@ -1057,10 +1057,10 @@ print("[Building] (toggle again to complete new constructions)")
 if syntaxcheck then return end
 local hero = _getHero()
 if not hero then error("Hero not found") end
-local input = InputQuery("Travel Speed", "Enter speed multiplier (2-99, default 5):", "5")
+local input = InputQuery("Travel Speed", "Enter speed multiplier (2-500, default 5):", "5")
 if not input then print("[Travel] Cancelled"); return end
 local multi = tonumber(input) or 5
-if multi > 99 then multi = 99 end
+if multi > 500 then multi = 500 end
 if multi < 1 then multi = 1 end
 
 -- Boost horse speed directly (hero+0x208=horse ItemData, +0x88=HorseData, +0x14=speed float)
