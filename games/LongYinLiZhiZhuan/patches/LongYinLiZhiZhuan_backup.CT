@@ -1,0 +1,2870 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CheatTable>
+  <CheatTableName>LongYinLiZhiZhuan All-in-One v6 (direct il2cpp)</CheatTableName>
+  <CheatEntries>
+    <CheatEntry>
+      <ID>0</ID>
+      <Description>"LongYinLiZhiZhuan - Attach to game first, then enable cheats"</Description>
+      <GroupHeader>1</GroupHeader>
+      <Color>FF0000</Color>
+      <CheatEntries>
+
+        <CheatEntry>
+          <ID>10</ID>
+          <Description>"--- Resources ---"</Description>
+          <GroupHeader>1</GroupHeader>
+          <Color>008000</Color>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>700</ID>
+              <Description>"Set Money (Silver)"</Description>
+              <Color>000000</Color>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript>
+[ENABLE]
+{$lua}
+if syntaxcheck then return end
+local function getHero() return _getHero() end
+local hero, err = getHero()
+if not hero then error(err) end
+local itemListData = readQword(hero + 0x220)
+if not itemListData or itemListData == 0 then error("ItemListData not found") end
+local cur = readInteger(itemListData + 0x18)
+local input = InputQuery("Set Money", "Current: " .. cur .. " silver. Enter new value:", "9999")
+if input then
+  local val = tonumber(input) or 9999
+  writeInteger(itemListData + 0x18, math.floor(val))
+  print(string.format("[Money] Set to %d silver", val))
+end
+{$asm}
+
+[DISABLE]
+{$lua}
+if syntaxcheck then return end
+print("[Money] (value remains as set)")
+{$asm}
+              </AssemblerScript>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>1200</ID>
+              <Description>"Max Carry Weight (no inventory limit)"</Description>
+              <Color>000000</Color>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript>
+[ENABLE]
+{$lua}
+if syntaxcheck then return end
+local function getHero() return _getHero() end
+local hero, err = getHero()
+if not hero then error(err) end
+local itemListData = readQword(hero + 0x220)
+if not itemListData or itemListData == 0 then error("ItemListData not found") end
+local curMax = readFloat(itemListData + 0x20)
+_maxWeightOrig = curMax
+writeFloat(itemListData + 0x20, 99999.0)
+print(string.format("[Weight] Max carry weight: %.0f -> 99999", curMax))
+{$asm}
+
+[DISABLE]
+{$lua}
+if syntaxcheck then return end
+if _maxWeightOrig then
+  local function getHero() local h = _getHero(); return h end
+  local hero = getHero()
+  if hero then
+    local itemListData = readQword(hero + 0x220)
+    if itemListData and itemListData ~= 0 then
+      writeFloat(itemListData + 0x20, _maxWeightOrig)
+    end
+  end
+  print(string.format("[Weight] Restored to %.0f", _maxWeightOrig))
+  _maxWeightOrig = nil
+end
+{$asm}
+              </AssemblerScript>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>1300</ID>
+              <Description>"Max Rarity All Inventory Items"</Description>
+              <Color>000000</Color>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript>
+[ENABLE]
+{$lua}
+if syntaxcheck then return end
+local function getHero() return _getHero() end
+local hero, err = getHero()
+if not hero then error(err) end
+local itemListData = readQword(hero + 0x220)
+if not itemListData or itemListData == 0 then error("ItemListData not found") end
+local allItem = readQword(itemListData + 0x28)
+if not allItem or allItem == 0 then error("allItem list null") end
+local itemCount = readInteger(allItem + 0x18)
+local itemArr = readQword(allItem + 0x10)
+if not itemArr or itemArr == 0 then error("Item array null") end
+local changed = 0
+for i = 0, itemCount - 1 do
+  local item = readQword(itemArr + 0x20 + i * 8)
+  if item and item ~= 0 then
+    local cur = readInteger(item + 0x40)
+    if cur ~= 5 then
+      writeInteger(item + 0x40, 5)
+      changed = changed + 1
+    end
+  end
+end
+print(string.format("[Rarity] Set %d/%d items to max rarity (5)", changed, itemCount))
+{$asm}
+
+[DISABLE]
+{$lua}
+if syntaxcheck then return end
+print("[Rarity] (values remain as set)")
+{$asm}
+              </AssemblerScript>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>600</ID>
+              <Description>"Set Sect Currency (forceContribution)"</Description>
+              <Color>000000</Color>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript>
+[ENABLE]
+{$lua}
+if syntaxcheck then return end
+local function getHero() return _getHero() end
+local hero, err = getHero()
+if not hero then error(err) end
+local cur = readFloat(hero + 0x1C0)
+local input = InputQuery("Sect Currency", "Current: " .. string.format("%.1f", cur) .. ". Enter new value:", "1000")
+if input then
+  local val = tonumber(input) or 1000
+  writeFloat(hero + 0x1C0, val * 1.0)
+  print(string.format("[SectCurrency] Set to %.0f", val))
+end
+{$asm}
+
+[DISABLE]
+{$lua}
+if syntaxcheck then return end
+print("[SectCurrency] (value remains as set)")
+{$asm}
+              </AssemblerScript>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+
+        <CheatEntry>
+          <ID>20</ID>
+          <Description>"--- Talents (TianFu) ---"</Description>
+          <GroupHeader>1</GroupHeader>
+          <Color>008000</Color>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>300</ID>
+              <Description>"Max Talent Slots (9 -> 99)"</Description>
+              <Color>000000</Color>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript>
+[ENABLE]
+{$lua}
+if syntaxcheck then return end
+local c = _il2cpp_init()
+if not c:ensure("hd", "HeroData") then error("HeroData not loaded yet - try again") end
+local targetAddr = _findMethodAddr(c.hd.klass, "GetMaxTagNum")
+if not targetAddr or targetAddr == 0 then error("GetMaxTagNum not found") end
+
+-- GetMaxTagNum has 3 return paths:
+--   Path A: mov eax, 0A  (B8 0A 00 00 00) — when [hero+0x58]!=0 (most common)
+--   Path B: mov eax, 09  (B8 09 00 00 00) — when config bool is set
+--   Path C: add eax, 09  (83 C0 09)       — base+9 calculated path
+-- All end with epilogue: 48 83 C4 20 5B C3  (add rsp,20; pop rbx; ret)
+-- We must patch ALL three to take effect.
+_talentCapPatches = {}
+local newCap = 0x63  -- 99
+
+for offset = 0, 511 do
+  local b = readBytes(targetAddr + offset, 1)
+  -- Pattern A/B: B8 XX 00 00 00 48 83 C4 20 5B C3  (mov eax, imm32; epilogue)
+  if b == 0xB8 then
+    local ok = true
+    for ci, cv in ipairs({nil, 0x00, 0x00, 0x00, 0x48, 0x83, 0xC4, 0x20, 0x5B, 0xC3}) do
+      if cv then
+        if readBytes(targetAddr + offset + ci, 1) ~= cv then ok = false; break end
+      end
+    end
+    if ok then
+      local pAddr = targetAddr + offset + 1
+      local orig = readBytes(pAddr, 1)
+      table.insert(_talentCapPatches, {addr=pAddr, orig=orig})
+      writeBytes(pAddr, newCap)
+      print(string.format("[TalentCap] Patched mov eax,0x%02X -> 0x%02X at +%d", orig, newCap, offset))
+    end
+  end
+  -- Pattern C: 83 C0 XX 48 83 C4 20 5B C3  (add eax, imm8; epilogue)
+  if b == 0x83 and readBytes(targetAddr + offset + 1, 1) == 0xC0 then
+    local ok = true
+    for ci, cv in ipairs({nil, nil, nil, 0x48, 0x83, 0xC4, 0x20, 0x5B, 0xC3}) do
+      if cv then
+        if readBytes(targetAddr + offset + ci - 1, 1) ~= cv then ok = false; break end
+      end
+    end
+    if ok then
+      local pAddr = targetAddr + offset + 2
+      local orig = readBytes(pAddr, 1)
+      table.insert(_talentCapPatches, {addr=pAddr, orig=orig})
+      writeBytes(pAddr, newCap)
+      print(string.format("[TalentCap] Patched add eax,0x%02X -> 0x%02X at +%d", orig, newCap, offset))
+    end
+  end
+end
+
+if #_talentCapPatches == 0 then
+  error("No patch sites found in GetMaxTagNum!")
+else
+  print(string.format("[TalentCap] Patched %d return paths (all -> max 99)", #_talentCapPatches))
+end
+{$asm}
+
+[DISABLE]
+{$lua}
+if syntaxcheck then return end
+if _talentCapPatches then
+  for _, p in ipairs(_talentCapPatches) do
+    writeBytes(p.addr, p.orig)
+  end
+  print(string.format("[TalentCap] Restored %d patches", #_talentCapPatches))
+  _talentCapPatches = nil
+end
+{$asm}
+              </AssemblerScript>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>500</ID>
+              <Description>"Set Talent Points (heroTagPoint)"</Description>
+              <Color>000000</Color>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript>
+[ENABLE]
+{$lua}
+if syntaxcheck then return end
+local function getHero() return _getHero() end
+local hero, err = getHero()
+if not hero then error(err) end
+local curPt = readFloat(hero + 0x35C)
+local input = InputQuery("Talent Points", "Current: " .. string.format("%.0f", curPt) .. ". Enter new value:", "10")
+if input then
+  local val = tonumber(input) or 10
+  writeFloat(hero + 0x35C, val * 1.0)
+  print(string.format("[TalentPt] Set to %.0f", val))
+end
+{$asm}
+
+[DISABLE]
+{$lua}
+if syntaxcheck then return end
+print("[TalentPt] (value remains as set)")
+{$asm}
+              </AssemblerScript>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>501</ID>
+              <Description>"Sect-Wide: Set Talent Points + Max Slots"</Description>
+              <Color>000000</Color>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript>
+[ENABLE]
+{$lua}
+if syntaxcheck then return end
+
+-- ============================================================
+-- Sect-Wide Talent Editor
+-- Finds all heroes in the player's sect, sets talent points
+-- and patches GetMaxTagNum for higher slot limit.
+-- ============================================================
+local function getWorldData() return _getWorldData() end
+
+local function readHeroName(hero)
+  local np = readQword(hero + 0x68)
+  if not np or np == 0 then return "?" end
+  local nl = readInteger(np + 0x10)
+  if not nl or (0 >= nl) or nl > 100 then return "?" end
+  return readString(np + 0x14, nl * 2, true) or "?"
+end
+
+local wd, err = getWorldData()
+if not wd then error(err) end
+
+-- Get player hero (index 0)
+local hl = readQword(wd + 0x50)
+if not hl or hl == 0 then error("HerosList null") end
+local heroCount = readInteger(hl + 0x18)
+local itemsPtr = readQword(hl + 0x10)
+if not itemsPtr or itemsPtr == 0 then error("HerosList items null") end
+
+local playerHero = readQword(itemsPtr + 0x20)
+if not playerHero or playerHero == 0 then error("Player hero null") end
+local playerForceID = readInteger(playerHero + 0x84)
+if not playerForceID then error("Cannot read player belongForceID") end
+
+-- Collect all sect members
+local sectMembers = {}
+for i = 0, heroCount - 1 do
+  local h = readQword(itemsPtr + 0x20 + i * 8)
+  if h and h ~= 0 then
+    local dead = readBytes(h + 0x61, 1)
+    local fid = readInteger(h + 0x84)
+    if fid == playerForceID and (dead == 0) then
+      local name = readHeroName(h)
+      local tp = readFloat(h + 0x35C)
+      local tagList = readQword(h + 0x360)
+      local tagCount = 0
+      if tagList and tagList ~= 0 then tagCount = readInteger(tagList + 0x18) or 0 end
+      local forceLv = readInteger(h + 0xB8) or 0
+      table.insert(sectMembers, {ptr=h, name=name, tagPt=tp, tagCount=tagCount, forceLv=forceLv, idx=i})
+    end
+  end
+end
+
+if #sectMembers == 0 then error("No living sect members found (forceID=" .. playerForceID .. ")") end
+
+-- Print sect roster to console
+print("========== Sect Members (ForceID=" .. playerForceID .. ") ==========")
+for _, m in ipairs(sectMembers) do
+  print(string.format("  [%d] %s  ForceLv=%d  TalentPt=%.0f  Tags=%d",
+    m.idx, m.name, m.forceLv, m.tagPt, m.tagCount))
+end
+print(string.format("  Total: %d members", #sectMembers))
+print("=======================================================")
+
+-- Ask for new talent points
+local input = InputQuery("Sect Talent Points",
+  #sectMembers .. " sect members found. Set ALL talent points to:", "99")
+if not input then print("[SectTalent] Cancelled"); return end
+local newPt = tonumber(input)
+if not newPt then print("[SectTalent] Invalid number"); return end
+
+-- Write talent points
+_sectTalentOrigPts = {}
+for _, m in ipairs(sectMembers) do
+  _sectTalentOrigPts[m.ptr] = m.tagPt
+  writeFloat(m.ptr + 0x35C, newPt * 1.0)
+end
+print(string.format("[SectTalent] Set %d members talent points to %.0f", #sectMembers, newPt))
+
+-- Ask for max talent slots
+local input2 = InputQuery("Max Talent Slots",
+  "Set max talent slots to (all 3 return paths patched):", "99")
+if input2 then
+  local newCap = tonumber(input2)
+  if newCap and newCap >= 1 and (255 >= newCap) then
+    local c2 = _il2cpp_init()
+    local targetAddr = _findMethodAddr(c2.hd.klass, "GetMaxTagNum")
+    if not targetAddr or targetAddr == 0 then
+      print("[SectTalent] ERROR: GetMaxTagNum method not found")
+    else
+      if true then
+        print(string.format("[SectTalent] GetMaxTagNum at 0x%X — patching all return paths", targetAddr))
+        -- GetMaxTagNum has 3 return paths, all ending with epilogue 48 83 C4 20 5B C3:
+        --   mov eax, 0A (B8 0A ...) — hero+0x58 != 0 path
+        --   mov eax, 09 (B8 09 ...) — config bool path
+        --   add eax, 09 (83 C0 09) — calculated path
+        _sectTalentCapPatches = {}
+        local capByte = math.floor(newCap)
+        for offset = 0, 511 do
+          local b = readBytes(targetAddr + offset, 1)
+          -- Pattern A: B8 XX 00 00 00 48 83 C4 20 5B C3
+          if b == 0xB8 then
+            local ok = true
+            for ci, cv in ipairs({nil, 0x00, 0x00, 0x00, 0x48, 0x83, 0xC4, 0x20, 0x5B, 0xC3}) do
+              if cv then
+                if readBytes(targetAddr + offset + ci, 1) ~= cv then ok = false; break end
+              end
+            end
+            if ok then
+              local pAddr = targetAddr + offset + 1
+              local orig = readBytes(pAddr, 1)
+              table.insert(_sectTalentCapPatches, {addr=pAddr, orig=orig})
+              writeBytes(pAddr, capByte)
+              print(string.format("[SectTalent] Patched mov eax,0x%02X -> 0x%02X at +%d", orig, capByte, offset))
+            end
+          end
+          -- Pattern B: 83 C0 XX 48 83 C4 20 5B C3
+          if b == 0x83 and readBytes(targetAddr + offset + 1, 1) == 0xC0 then
+            local ok = true
+            for ci, cv in ipairs({nil, nil, nil, 0x48, 0x83, 0xC4, 0x20, 0x5B, 0xC3}) do
+              if cv then
+                if readBytes(targetAddr + offset + ci - 1, 1) ~= cv then ok = false; break end
+              end
+            end
+            if ok then
+              local pAddr = targetAddr + offset + 2
+              local orig = readBytes(pAddr, 1)
+              table.insert(_sectTalentCapPatches, {addr=pAddr, orig=orig})
+              writeBytes(pAddr, capByte)
+              print(string.format("[SectTalent] Patched add eax,0x%02X -> 0x%02X at +%d", orig, capByte, offset))
+            end
+          end
+        end
+        if #_sectTalentCapPatches == 0 then
+          local dump = {}
+          for i = 0, 31 do dump[#dump+1] = string.format("%02X", readBytes(targetAddr + i, 1) or 0) end
+          print("[SectTalent] No patches found! First 32 bytes: " .. table.concat(dump, " "))
+        else
+          print(string.format("[SectTalent] Patched %d return paths (max slots = %d)", #_sectTalentCapPatches, newCap))
+        end
+      end
+    end
+  else
+    print("[SectTalent] Skipped slot patch (cancelled or invalid)")
+  end
+end
+{$asm}
+
+[DISABLE]
+{$lua}
+if syntaxcheck then return end
+if _sectTalentCapPatches then
+  for _, p in ipairs(_sectTalentCapPatches) do
+    writeBytes(p.addr, p.orig)
+  end
+  print(string.format("[SectTalent] Restored %d slot patches", #_sectTalentCapPatches))
+  _sectTalentCapPatches = nil
+end
+print("[SectTalent] Disabled (talent points remain as set)")
+{$asm}
+              </AssemblerScript>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+
+        <CheatEntry>
+          <ID>30</ID>
+          <Description>"--- Skills ---"</Description>
+          <GroupHeader>1</GroupHeader>
+          <Color>008000</Color>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>800</ID>
+              <Description>"Max Skill Learn Limits (all tiers -> 99)"</Description>
+              <Color>000000</Color>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript>
+[ENABLE]
+{$lua}
+if syntaxcheck then return end
+local c = _il2cpp_init()
+if not c:ensure("gd", "GlobalData") then error("GlobalData not loaded yet - try again") end
+local listPtr = readQword(c.gd.static + c.gd.skillOff)
+if not listPtr or listPtr == 0 then error("MaxSkillNum list not found") end
+local count = readInteger(listPtr + 0x18)
+local items = readQword(listPtr + 0x10)
+_skillLimitOrig = {}
+for i = 0, count - 1 do
+  _skillLimitOrig[i] = readFloat(items + 0x20 + i * 4)
+  writeFloat(items + 0x20 + i * 4, 99.0)
+end
+print(string.format("[SkillLimit] All %d tiers set to 99", count))
+{$asm}
+
+[DISABLE]
+{$lua}
+if syntaxcheck then return end
+if _skillLimitOrig then
+  local ok, c = pcall(_il2cpp_init)
+  if ok and c then
+    if not c:ensure("gd", "GlobalData") then error("GlobalData not loaded yet - try again") end
+local listPtr = readQword(c.gd.static + c.gd.skillOff)
+    if listPtr and listPtr ~= 0 then
+      local items = readQword(listPtr + 0x10)
+      if items and items ~= 0 then
+        for i, v in pairs(_skillLimitOrig) do
+          writeFloat(items + 0x20 + i * 4, v)
+        end
+      end
+    end
+  end
+  print("[SkillLimit] Restored original limits")
+  _skillLimitOrig = nil
+end
+{$asm}
+              </AssemblerScript>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>400</ID>
+              <Description>"WuXueTianCai Buff - Combat Skill EXP Rate (default 30%)"</Description>
+              <Color>000000</Color>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript>
+[ENABLE]
+{$lua}
+if syntaxcheck then return end
+local c = _il2cpp_init()
+if not c:ensure("gdc", "GameDataController", 0x20) then error("GameDataController not loaded yet - try again") end
+local gdcInstance = readQword(c.gdc.static + c.gdc.instOff)
+if not gdcInstance or gdcInstance == 0 then error("GDC instance not found") end
+local tagDataBase = readQword(gdcInstance + c.gdc.tagBaseOff)
+if not tagDataBase or tagDataBase == 0 then error("heroTagDataBase null (talent data not loaded?)") end
+local tagItems = readQword(tagDataBase + 0x10)
+if not tagItems or tagItems == 0 then error("tagDataBase items null") end
+local tag222 = readQword(tagItems + 0x20 + 222 * 8)
+if not tag222 or tag222 == 0 then error("Tag 222 (WuXueTianCai) not found in DB") end
+local buffData = readQword(tag222 + 0x50)
+if not buffData or buffData == 0 then error("Tag 222 buffData null") end
+local dict = readQword(buffData + 0x10)
+if not dict or dict == 0 then error("buffData dict null") end
+local entries = readQword(dict + 0x18)
+if not entries or entries == 0 then error("dict entries null") end
+local count = readInteger(dict + 0x20)
+_talentBuffAddrs = {}
+for i = 0, count - 1 do
+  local base = entries + 0x20 + i * 16
+  local key = readInteger(base + 8)
+  if key == 176 then _talentBuffAddrs.fight = base + 12 end
+  if key == 177 then _talentBuffAddrs.book = base + 12 end
+end
+local curFight = _talentBuffAddrs.fight and readFloat(_talentBuffAddrs.fight) or 0
+local curBook = _talentBuffAddrs.book and readFloat(_talentBuffAddrs.book) or 0
+_talentBuffOrigFight = curFight
+_talentBuffOrigBook = curBook
+local input = InputQuery("WuXueTianCai Buff", "Current: FightExp=" .. string.format("%.0f%%", curFight*100) .. " BookExp=" .. string.format("%.0f%%", curBook*100) .. ". Enter new % (e.g. 300 for 300%):", "300")
+if input then
+  local pct = tonumber(input) or 300
+  local newVal = pct / 100.0
+  if _talentBuffAddrs.fight then writeFloat(_talentBuffAddrs.fight, newVal) end
+  if _talentBuffAddrs.book then writeFloat(_talentBuffAddrs.book, newVal) end
+  print(string.format("[WuXueTianCai] Set fight=%.0f%% book=%.0f%%", pct, pct))
+end
+{$asm}
+
+[DISABLE]
+{$lua}
+if syntaxcheck then return end
+if _talentBuffAddrs then
+  if _talentBuffAddrs.fight and _talentBuffOrigFight then writeFloat(_talentBuffAddrs.fight, _talentBuffOrigFight) end
+  if _talentBuffAddrs.book and _talentBuffOrigBook then writeFloat(_talentBuffAddrs.book, _talentBuffOrigBook) end
+  print("[WuXueTianCai] Restored original values")
+  _talentBuffAddrs = nil
+end
+{$asm}
+              </AssemblerScript>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>401</ID>
+              <Description>"BoXueDuoCai Buff - Non-Combat Skill EXP Rate (default 30%)"</Description>
+              <Color>000000</Color>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript>
+[ENABLE]
+{$lua}
+if syntaxcheck then return end
+local c = _il2cpp_init()
+if not c:ensure("gdc", "GameDataController", 0x20) then error("GameDataController not loaded yet - try again") end
+local gdcInstance = readQword(c.gdc.static + c.gdc.instOff)
+if not gdcInstance or gdcInstance == 0 then error("GDC instance not found") end
+local tagDataBase = readQword(gdcInstance + c.gdc.tagBaseOff)
+if not tagDataBase or tagDataBase == 0 then error("heroTagDataBase null (talent data not loaded?)") end
+local tagItems = readQword(tagDataBase + 0x10)
+if not tagItems or tagItems == 0 then error("tagDataBase items null") end
+local tag243 = readQword(tagItems + 0x20 + 243 * 8)
+if not tag243 or tag243 == 0 then error("Tag 243 (BoXueDuoCai) not found in DB") end
+local buffData = readQword(tag243 + 0x50)
+if not buffData or buffData == 0 then error("Tag 243 buffData null") end
+local dict = readQword(buffData + 0x10)
+if not dict or dict == 0 then error("buffData dict null") end
+local entries = readQword(dict + 0x18)
+if not entries or entries == 0 then error("dict entries null") end
+local count = readInteger(dict + 0x20)
+_livingBuffAddr = nil
+for i = 0, count - 1 do
+  local base = entries + 0x20 + i * 16
+  local key = readInteger(base + 8)
+  if key == 178 then _livingBuffAddr = base + 12 end
+end
+local curVal = _livingBuffAddr and readFloat(_livingBuffAddr) or 0
+_livingBuffOrigVal = curVal
+local input = InputQuery("BoXueDuoCai Buff", "Current: LivingSkillExp=" .. string.format("%.0f%%", curVal*100) .. ". Enter new % (e.g. 300 for 300%):", "300")
+if input then
+  local pct = tonumber(input) or 300
+  local newVal = pct / 100.0
+  if _livingBuffAddr then writeFloat(_livingBuffAddr, newVal) end
+  print(string.format("[BoXueDuoCai] Set LivingSkillExp=%.0f%%", pct))
+end
+{$asm}
+
+[DISABLE]
+{$lua}
+if syntaxcheck then return end
+if _livingBuffAddr and _livingBuffOrigVal then
+  writeFloat(_livingBuffAddr, _livingBuffOrigVal)
+  print("[BoXueDuoCai] Restored original value")
+  _livingBuffAddr = nil
+  _livingBuffOrigVal = nil
+end
+{$asm}
+              </AssemblerScript>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+
+        <CheatEntry>
+          <ID>50</ID>
+          <Description>"--- Health ---"</Description>
+          <GroupHeader>1</GroupHeader>
+          <Color>008000</Color>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>900</ID>
+              <Description>"Restore HP to Max"</Description>
+              <Color>000000</Color>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript>
+[ENABLE]
+{$lua}
+if syntaxcheck then return end
+local function getHero() return _getHero() end
+local hero, err = getHero()
+if not hero then error(err) end
+local maxhp = readFloat(hero + 0x17C)
+writeFloat(hero + 0x178, maxhp)
+print(string.format("[HP] Restored to max: %.0f", maxhp))
+{$asm}
+
+[DISABLE]
+{$lua}
+if syntaxcheck then return end
+print("[HP] (value remains as set)")
+{$asm}
+              </AssemblerScript>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>901</ID>
+              <Description>"Clear All Injuries (external/internal/poison)"</Description>
+              <Color>000000</Color>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript>
+[ENABLE]
+{$lua}
+if syntaxcheck then return end
+local function getHero() return _getHero() end
+local hero, err = getHero()
+if not hero then error(err) end
+local ext = readFloat(hero + 0x1A0)
+local int_ = readFloat(hero + 0x1A4)
+local poi = readFloat(hero + 0x1A8)
+writeFloat(hero + 0x1A0, 0.0)
+writeFloat(hero + 0x1A4, 0.0)
+writeFloat(hero + 0x1A8, 0.0)
+print(string.format("[Injury] Cleared: ext=%.1f int=%.1f poison=%.1f -> all 0", ext, int_, poi))
+{$asm}
+
+[DISABLE]
+{$lua}
+if syntaxcheck then return end
+print("[Injury] (values remain as set)")
+{$asm}
+              </AssemblerScript>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+
+        <CheatEntry>
+          <ID>70</ID>
+          <Description>"--- Reputation ---"</Description>
+          <GroupHeader>1</GroupHeader>
+          <Color>008000</Color>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>1100</ID>
+              <Description>"Max All NPC Favor (everyone likes you)"</Description>
+              <Color>000000</Color>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript>
+[ENABLE]
+{$lua}
+if syntaxcheck then return end
+local wd = _getWorldData()
+if not wd then error("WorldData null") end
+local herosList = readQword(wd + 0x50); if not herosList or herosList == 0 then error("HerosList null") end
+local heroCount = readInteger(herosList + 0x18)
+local itemsPtr = readQword(herosList + 0x10)
+if not itemsPtr or itemsPtr == 0 then error("HerosList items null") end
+local boosted = 0
+for i = 1, heroCount - 1 do
+  local npc = readQword(itemsPtr + 0x20 + i * 8)
+  if npc and npc ~= 0 then
+    writeFloat(npc + 0x124, 100.0)
+    boosted = boosted + 1
+  end
+end
+print(string.format("[Favor] Set %d NPCs favor to 100", boosted))
+{$asm}
+
+[DISABLE]
+{$lua}
+if syntaxcheck then return end
+print("[Favor] (values remain as set)")
+{$asm}
+              </AssemblerScript>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>1101</ID>
+              <Description>"Set Fame / Clear Bad Fame"</Description>
+              <Color>000000</Color>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript>
+[ENABLE]
+{$lua}
+if syntaxcheck then return end
+local function getHero() return _getHero() end
+local hero, err = getHero()
+if not hero then error(err) end
+local curFame = readFloat(hero + 0x1C4)
+local curBad = readFloat(hero + 0x1C8)
+local input = InputQuery("Set Fame", "Current: Fame=" .. string.format("%.0f", curFame) .. " BadFame=" .. string.format("%.0f", curBad) .. ". Enter new Fame (BadFame will be set to 0):", "1000")
+if input then
+  local val = tonumber(input) or 1000
+  writeFloat(hero + 0x1C4, val * 1.0)
+  writeFloat(hero + 0x1C8, 0.0)
+  print(string.format("[Fame] Set fame=%.0f badFame=0", val))
+end
+{$asm}
+
+[DISABLE]
+{$lua}
+if syntaxcheck then return end
+print("[Fame] (values remain as set)")
+{$asm}
+              </AssemblerScript>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>1102</ID>
+              <Description>"Set Contribution to Other Factions (shop exchange)"</Description>
+              <Color>000000</Color>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript>
+[ENABLE]
+{$lua}
+if syntaxcheck then return end
+local wd = _getWorldData()
+if not wd then error("WorldData null") end
+local forces = readQword(wd + 0x48)
+if not forces or forces == 0 then error("Forces null") end
+local forceItems = readQword(forces + 0x10)
+local forceCount = readInteger(forces + 0x18)
+
+local input = InputQuery("Faction Contribution", "Set your contribution to ALL other factions to:", "999")
+if not input then print("[OutContrib] Cancelled"); return end
+local newVal = tonumber(input)
+if not newVal then print("[OutContrib] Invalid number"); return end
+
+local changed = 0
+for i = 0, forceCount - 1 do
+  local fd = readQword(forceItems + 0x20 + i * 8)
+  if fd and fd ~= 0 then
+    writeFloat(fd + 0x170, newVal * 1.0)
+    changed = changed + 1
+  end
+end
+print(string.format("[OutContrib] Set contribution to %d factions = %.0f", changed, newVal))
+{$asm}
+
+[DISABLE]
+{$lua}
+if syntaxcheck then return end
+print("[OutContrib] (values remain as set)")
+{$asm}
+              </AssemblerScript>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>1103</ID>
+              <Description>"Set Faction Affinity (all factions love your sect)"</Description>
+              <Color>000000</Color>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript><![CDATA[[ENABLE]
+{$lua}
+if syntaxcheck then return end
+local hero = _getHero()
+if not hero then error("Hero not found") end
+local playerForceID = readInteger(hero + 0x84)
+local wd = _getWorldData()
+if not wd then error("WorldData null") end
+local forces = readQword(wd + 0x48)
+if not forces or forces == 0 then error("Forces null") end
+local forceItems = readQword(forces + 0x10)
+local forceCount = readInteger(forces + 0x18)
+
+local input = InputQuery("Faction Affinity", "Set ALL factions' favor toward your sect to (default 50, max 100):", "100")
+if not input then print("[ForceFavor] Cancelled"); return end
+local newVal = tonumber(input)
+if not newVal then print("[ForceFavor] Invalid number"); return end
+
+-- forceFavor at ForceData+0xD0 is a List<float> indexed by forceID
+local changed = 0
+for i = 0, forceCount - 1 do
+  local fd = readQword(forceItems + 0x20 + i * 8)
+  if fd and fd ~= 0 then
+    local fid = readInteger(fd + 0x10)
+    if fid ~= playerForceID then
+      local listPtr = readQword(fd + 0xD0)
+      if listPtr and listPtr ~= 0 then
+        local itemsArr = readQword(listPtr + 0x10)
+        local size = readInteger(listPtr + 0x18)
+        if itemsArr and itemsArr ~= 0 and playerForceID < size then
+          writeFloat(itemsArr + 0x20 + playerForceID * 4, newVal * 1.0)
+          changed = changed + 1
+        end
+      end
+    end
+  end
+end
+
+-- Also set player's faction favor toward all others
+local playerFD = nil
+for i = 0, forceCount - 1 do
+  local fd = readQword(forceItems + 0x20 + i * 8)
+  if fd and fd ~= 0 and readInteger(fd + 0x10) == playerForceID then playerFD = fd; break end
+end
+if playerFD then
+  local listPtr = readQword(playerFD + 0xD0)
+  if listPtr and listPtr ~= 0 then
+    local itemsArr = readQword(listPtr + 0x10)
+    local size = readInteger(listPtr + 0x18)
+    if itemsArr and itemsArr ~= 0 then
+      for j = 0, size - 1 do
+        if j ~= playerForceID then
+          writeFloat(itemsArr + 0x20 + j * 4, newVal * 1.0)
+        end
+      end
+    end
+  end
+end
+
+print(string.format("[ForceFavor] Set %d factions' favor toward you = %.0f, your favor toward all = %.0f", changed, newVal, newVal))
+{$asm}
+
+[DISABLE]
+{$lua}
+if syntaxcheck then return end
+print("[ForceFavor] (values remain as set)")
+{$asm}
+]]></AssemblerScript>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+
+        <CheatEntry>
+          <ID>75</ID>
+          <Description>"--- Sect Resources ---"</Description>
+          <GroupHeader>1</GroupHeader>
+          <Color>008000</Color>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>1104</ID>
+              <Description>"Max Sect Resources (fill to storage cap)"</Description>
+              <Color>000000</Color>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript><![CDATA[[ENABLE]
+{$lua}
+if syntaxcheck then return end
+local hero = _getHero()
+if not hero then error("Hero not found") end
+local playerForceID = readInteger(hero + 0x84)
+local wd = _getWorldData()
+if not wd then error("WorldData null") end
+local forces = readQword(wd + 0x48)
+local forceItems = readQword(forces + 0x10)
+local forceCount = readInteger(forces + 0x18)
+local playerFD = nil
+for i = 0, forceCount - 1 do
+  local fd = readQword(forceItems + 0x20 + i * 8)
+  if fd and fd ~= 0 and readInteger(fd + 0x10) == playerForceID then playerFD = fd; break end
+end
+if not playerFD then error("Player ForceData not found") end
+
+-- resourceStore at +0x88, resourceStoreMax at +0x90
+local rs = readQword(playerFD + 0x88)
+local rsItems = readQword(rs + 0x10)
+local rsSize = readInteger(rs + 0x18)
+local rm = readQword(playerFD + 0x90)
+local rmItems = readQword(rm + 0x10)
+
+local resNames = {"Wood", "Ore", "Medicine", "Food", "Poison", "Money"}
+local filled = 0
+for i = 0, rsSize - 1 do
+  local mx = readFloat(rmItems + 0x20 + i * 4)
+  writeFloat(rsItems + 0x20 + i * 4, mx)
+  local name = resNames[i + 1] or ("Res" .. i)
+  print(string.format("[Resource] %s -> %.0f", name, mx))
+  filled = filled + 1
+end
+print(string.format("[Resource] Filled %d resources to max", filled))
+{$asm}
+
+[DISABLE]
+{$lua}
+if syntaxcheck then return end
+print("[Resource] (values remain as set)")
+{$asm}
+]]></AssemblerScript>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+
+        <CheatEntry>
+          <ID>95</ID>
+          <Description>"--- Research ---"</Description>
+          <GroupHeader>1</GroupHeader>
+          <Color>008000</Color>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>1410</ID>
+              <Description>"Instant Complete Current Research"</Description>
+              <Color>000000</Color>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript><![CDATA[[ENABLE]
+{$lua}
+if syntaxcheck then return end
+local hero = _getHero()
+if not hero then error("Hero not found") end
+local playerForceID = readInteger(hero + 0x84)
+local wd = _getWorldData()
+if not wd then error("WorldData null") end
+local forces = readQword(wd + 0x48)
+local forceItems = readQword(forces + 0x10)
+local forceCount = readInteger(forces + 0x18)
+local playerFD = nil
+for i = 0, forceCount - 1 do
+  local fd = readQword(forceItems + 0x20 + i * 8)
+  if fd and fd ~= 0 and readInteger(fd + 0x10) == playerForceID then playerFD = fd; break end
+end
+if not playerFD then error("Player ForceData not found") end
+
+local activeID = readInteger(playerFD + 0x128)
+if activeID < 0 then error("No active research (nowResearchTech < 0)") end
+
+local tld = readQword(playerFD + 0x130)
+local tldItems = readQword(tld + 0x10)
+local tldCnt = readInteger(tld + 0x18)
+
+local found = false
+for i = 0, tldCnt - 1 do
+  local e = readQword(tldItems + 0x20 + i * 8)
+  if e and e ~= 0 and readInteger(e + 0x10) == activeID then
+    local oldLv = readInteger(e + 0x14)
+    local oldPct = readFloat(e + 0x18)
+    -- Complete: increment level, reset progress, clear active research
+    writeInteger(e + 0x14, oldLv + 1)
+    writeFloat(e + 0x18, 0.0)
+    writeInteger(playerFD + 0x128, -1)
+    print(string.format("[Research] Tech %d: lv %d -> %d (was %.0f%%, now complete and cleared)", activeID, oldLv, oldLv + 1, oldPct * 100))
+    found = true
+    break
+  end
+end
+if not found then print("[Research] Active tech " .. activeID .. " not found in techLvData") end
+{$asm}
+
+[DISABLE]
+{$lua}
+if syntaxcheck then return end
+print("[Research] (toggle again to complete next research)")
+{$asm}
+]]></AssemblerScript>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+
+        <CheatEntry>
+          <ID>90</ID>
+          <Description>"--- Buildings ---"</Description>
+          <GroupHeader>1</GroupHeader>
+          <Color>008000</Color>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>1400</ID>
+              <Description>"Instant Complete All Buildings (build/upgrade/destroy)"</Description>
+              <Color>000000</Color>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript>
+[ENABLE]
+{$lua}
+if syntaxcheck then return end
+local wd = _getWorldData()
+if not wd then error("WorldData null") end
+local areas = readQword(wd + 0x30)
+if not areas or areas == 0 then error("Areas null") end
+local areaCount = readInteger(areas + 0x18)
+local areaItems = readQword(areas + 0x10)
+if not areaItems or areaItems == 0 then error("Area items null") end
+
+local completed = 0
+for i = 0, areaCount - 1 do
+  local area = readQword(areaItems + 0x20 + i * 8)
+  if area and area ~= 0 then
+    local tiles = readQword(area + 0xC0)
+    if tiles and tiles ~= 0 then
+      local tileCount = readInteger(tiles + 0x18)
+      local tileItems = readQword(tiles + 0x10)
+      if tileCount and tileItems and tileItems ~= 0 then
+        for t = 0, tileCount - 1 do
+          local tile = readQword(tileItems + 0x20 + t * 8)
+          if tile and tile ~= 0 then
+            local bldg = readQword(tile + 0x28)
+            if bldg and bldg ~= 0 then
+              local bt = readInteger(bldg + 0x18) or 0
+              local ut = readInteger(bldg + 0x1C) or 0
+              local dt = readInteger(bldg + 0x20) or 0
+              if bt > 0 then writeInteger(bldg + 0x18, 0); completed = completed + 1 end
+              if ut > 0 then writeInteger(bldg + 0x1C, 0); completed = completed + 1 end
+              if dt > 0 then writeInteger(bldg + 0x20, 0); completed = completed + 1 end
+            end
+          end
+        end
+      end
+    end
+    -- Also clear area branch defence upgrade time
+    local branchTime = readInteger(area + 0xD8) or 0
+    if branchTime > 0 then writeInteger(area + 0xD8, 0); completed = completed + 1 end
+  end
+end
+print(string.format("[Building] Instantly completed %d pending operations across %d areas", completed, areaCount))
+{$asm}
+
+[DISABLE]
+{$lua}
+if syntaxcheck then return end
+print("[Building] (toggle again to complete new constructions)")
+{$asm}
+              </AssemblerScript>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+
+        <CheatEntry>
+          <ID>96</ID>
+          <Description>"--- Travel ---"</Description>
+          <GroupHeader>1</GroupHeader>
+          <Color>008000</Color>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>1420</ID>
+              <Description>"Boost Horse Speed (world map travel)"</Description>
+              <Color>000000</Color>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript><![CDATA[[ENABLE]
+{$lua}
+if syntaxcheck then return end
+local hero = _getHero()
+if not hero then error("Hero not found") end
+local input = InputQuery("Boost Horse Speed", "Enter speed multiplier (2-500, default 100):", "100")
+if not input then print("[Travel] Cancelled"); return end
+local multi = tonumber(input) or 5
+if multi > 500 then multi = 500 end
+if multi < 1 then multi = 1 end
+
+-- Boost horse speed directly (hero+0x208=horse ItemData, +0x88=HorseData, +0x14=speed float)
+local horseItem = readQword(hero + 0x208)
+if not horseItem or horseItem == 0 then error("No horse equipped! Equip a horse first.") end
+local horseData = readQword(horseItem + 0x88)
+if not horseData or horseData == 0 then error("Horse has no HorseData") end
+local origSpeed = readFloat(horseData + 0x14)
+_travelOrig = {addr = horseData + 0x14, val = origSpeed}
+writeFloat(horseData + 0x14, origSpeed * multi)
+print(string.format("[Travel] Horse speed: %.0f -> %.0f (x%d)", origSpeed, origSpeed * multi, multi))
+{$asm}
+
+[DISABLE]
+{$lua}
+if syntaxcheck then return end
+if _travelOrig then
+  writeFloat(_travelOrig.addr, _travelOrig.val)
+  print(string.format("[Travel] Horse speed restored to %.0f", _travelOrig.val))
+  _travelOrig = nil
+end
+{$asm}
+]]></AssemblerScript>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+
+        <CheatEntry>
+          <ID>60</ID>
+          <Description>"--- Battle ---"</Description>
+          <GroupHeader>1</GroupHeader>
+          <Color>008000</Color>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>1001</ID>
+              <Description>"Battle Speed Boost (continuous)"</Description>
+              <Color>000000</Color>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript><![CDATA[[ENABLE]
+{$lua}
+if syntaxcheck then return end
+local input = InputQuery("Battle Speed", "Enter speed (game max=10, try 200-500, max 999):", "50")
+if not input then print("[Battle] Cancelled"); return end
+local val = tonumber(input) or 50
+if val > 999 then val = 999 end
+if val < 1 then val = 1 end
+_battleSpeedVal = val
+
+-- Timer continuously forces the value since game overwrites it each frame
+if _battleSpeedTimer then _battleSpeedTimer.destroy() end
+_battleSpeedTimer = createTimer(nil)
+_battleSpeedTimer.Interval = 50
+_battleSpeedTimer.OnTimer = function()
+  local pid = getOpenedProcessID()
+  if not pid or pid == 0 then
+    _battleSpeedTimer.Enabled = false
+    return
+  end
+  local ok, wd = pcall(_getWorldData)
+  if ok and wd then
+    pcall(writeFloat, wd + 0x1D0, _battleSpeedVal)
+  end
+end
+_battleSpeedTimer.Enabled = true
+print(string.format("[Battle] Speed locked to %.0fx", val))
+{$asm}
+
+[DISABLE]
+{$lua}
+if syntaxcheck then return end
+if _battleSpeedTimer then
+  _battleSpeedTimer.destroy()
+  _battleSpeedTimer = nil
+end
+local ok, wd = pcall(_getWorldData)
+if ok and wd then writeFloat(wd + 0x1D0, 1.0) end
+print("[Battle] Speed timer stopped, restored to 1x")
+{$asm}
+]]></AssemblerScript>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>1000</ID>
+              <Description>"One-Hit KO (set all enemies to 1 HP)"</Description>
+              <Color>000000</Color>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript>
+[ENABLE]
+{$lua}
+if syntaxcheck then return end
+local c = _il2cpp_init()
+if not c:ensure("bc", "BattleController", 0x50) then error("BattleController not loaded - enter a battle first") end
+local bcInstance = readQword(c.bc.static + c.bc.instOff)
+if not bcInstance or bcInstance == 0 then error("Not in battle (BattleController._instance null)") end
+local playerUnit = readQword(bcInstance + 0x1A8)
+if not playerUnit or playerUnit == 0 then error("Player unit not found") end
+local pTeam = readQword(playerUnit + 0x58)
+if not pTeam or pTeam == 0 then error("Player team null") end
+local playerTeamID = readInteger(pTeam + 0x10)
+local teams = readQword(bcInstance + 0x70)
+if not teams or teams == 0 then error("Teams list null") end
+local teamItems = readQword(teams + 0x10)
+if not teamItems or teamItems == 0 then error("Team items null") end
+local teamCount = readInteger(teams + 0x18)
+local killed = 0
+for t = 0, teamCount - 1 do
+  local team = readQword(teamItems + 0x20 + t * 8)
+  if team and team ~= 0 then
+    local teamID = readInteger(team + 0x10)
+    if teamID ~= playerTeamID then
+      local units = readQword(team + 0x18)
+      if units and units ~= 0 then
+        local unitCount = readInteger(units + 0x18)
+        local unitItems = readQword(units + 0x10)
+        if unitItems and unitItems ~= 0 then
+          for u = 0, unitCount - 1 do
+            local unit = readQword(unitItems + 0x20 + u * 8)
+            if unit and unit ~= 0 then
+              local heroData = readQword(unit + 0x40)
+              if heroData and heroData ~= 0 then
+                local hp = readFloat(heroData + 0x178)
+                if hp > 0 then
+                  writeFloat(heroData + 0x178, 1.0)
+                  killed = killed + 1
+                end
+              end
+            end
+          end
+        end
+      end
+    end
+  end
+end
+print(string.format("[Battle] Set %d enemies to 1 HP", killed))
+{$asm}
+
+[DISABLE]
+{$lua}
+if syntaxcheck then return end
+print("[Battle] (toggle again to use in next fight)")
+{$asm}
+              </AssemblerScript>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+
+        <CheatEntry>
+          <ID>40</ID>
+          <Description>"--- Stats ---"</Description>
+          <GroupHeader>1</GroupHeader>
+          <Color>008000</Color>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>200</ID>
+              <Description>"Set Stat Caps (all skills/attributes)"</Description>
+              <Color>000000</Color>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript>
+[ENABLE]
+{$lua}
+if syntaxcheck then return end
+local function getHero() return _getHero() end
+local hero, err = getHero()
+if not hero then error(err) end
+
+local input = InputQuery("Stat Cap Boost", "Enter new cap value for all skills/attributes:", "99")
+if input then
+  local capValue = tonumber(input) or 99.0
+  local lists = {0x130, 0x148, 0x160}
+  local total = 0
+  for _, offset in ipairs(lists) do
+    local listPtr = readQword(hero + offset)
+    if listPtr and listPtr ~= 0 then
+      local count = readInteger(listPtr + 0x18)
+      local items = readQword(listPtr + 0x10)
+      if items and items ~= 0 and count then
+        for j = 0, count - 1 do
+          local cur = readFloat(items + 0x20 + j * 4)
+          if cur and capValue > cur then
+            writeFloat(items + 0x20 + j * 4, capValue)
+            total = total + 1
+          end
+        end
+      end
+    end
+  end
+  print(string.format("[StatCap] Boosted %d stats to %.0f", total, capValue))
+end
+{$asm}
+
+[DISABLE]
+{$lua}
+if syntaxcheck then return end
+print("[StatCap] (values remain as set)")
+{$asm}
+              </AssemblerScript>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+
+
+        <CheatEntry>
+          <ID>80</ID>
+          <Description>"--- Item Adder (Connect to Game first) ---"</Description>
+          <GroupHeader>1</GroupHeader>
+          <Color>FF8000</Color>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>1500</ID>
+              <Description>"Open Item Adder GUI (tick to open)"</Description>
+              <Color>000000</Color>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript><![CDATA[[ENABLE]
+{$lua}
+if syntaxcheck then return end
+if _itemAdderForm then _itemAdderForm.destroy(); _itemAdderForm = nil end
+
+-- ============================================================
+-- DEBUG LOG
+-- ============================================================
+local LOG_PATH = os.getenv("TEMP") .. "\\ce_itemadder_debug.log"
+local _logFile = nil
+local function logOpen()
+  _logFile = io.open(LOG_PATH, "w")
+  if _logFile then _logFile:write("=== ItemAdder v3 Debug Log ===\n") end
+end
+local function log(msg)
+  if _logFile then _logFile:write(os.date("%H:%M:%S ") .. tostring(msg) .. "\n"); _logFile:flush() end
+end
+local function logClose()
+  if _logFile then _logFile:close(); _logFile = nil end
+end
+local function toHex(addr)
+  if not addr then return "nil" end
+  return string.format("%X", addr)
+end
+
+-- ============================================================
+-- DATABASES FOR DROPDOWNS
+-- ============================================================
+local skillDB = {
+  {279,"元始天功 内功"},{280,"飘飘欲仙 轻功"},{281,"虎啸龙吟 绝技"},
+  {282,"照影神拳 拳掌"},{283,"诛仙剑法 剑法"},{284,"九州风雷刀 刀法"},
+  {285,"大闹天宫棍 长兵"},{286,"碧海潮生曲 奇门"},{287,"多情飞刀 射术"},
+  {317,"醉梦鱼龙舞 轻功"},{318,"净乐琉璃刀 刀法"},
+  {352,"漫天花雨 绝技"},{353,"九天罗候针 射术"},
+  {383,"黄帝秘经 内功"},{384,"灵犀一指 拳掌"},
+  {419,"降龙掌法 拳掌"},{420,"打狗八绝棍 长兵"},
+  {455,"帝王封禅功 绝技"},{456,"惊鸿一点枪 长兵"},
+  {495,"遁甲天书 绝技"},{496,"天劫九重 奇门"},
+  {526,"无尽剑意 剑法"},{566,"蚩尤鬼降 轻功"},
+  {567,"万毒宝典 绝技"},{568,"金蚕王蛊 射术"},
+  {604,"万恶魔功 内功"},{605,"血脉逆行 绝技"},{606,"杀人刀法 刀法"},
+  {644,"归墟秘典 内功"},{645,"天人感应步 轻功"},{646,"轮回不灭法 绝技"},
+  {689,"易筋经 内功"},{690,"洗髓经 内功"},
+  {691,"金刚不坏神功 绝技"},{692,"达摩神杖 长兵"},
+  {729,"太极神功 内功"},{730,"道德真经 绝技"},{731,"太极剑道 剑法"},
+  {760,"霸刀一式 刀法"},{792,"敲爻歌诀 内功"},{793,"天遁剑法 剑法"},
+  {825,"三洞灵宝经 内功"},{826,"诸天化身步 轻功"},
+  {857,"斗转星移 绝技"},{887,"武库战车 轻功"},{888,"公输遗匣 奇门"},
+  {917,"灭世天雷 射术"},{952,"大日如来功 内功"},
+  {953,"龙象护法功 绝技"},{954,"因陀罗杵 奇门"},
+  {989,"不老长春功 内功"},{990,"仙娥折梅 轻功"},
+  {991,"白虹贯日掌 拳掌"},{992,"逆转周天大法 绝技"},
+  {994,"心狂归藏功 内功"},{995,"龙胤归藏功 内功"},
+}
+local medDB = {
+  {5,"万灵回生散 HP G5"},{11,"紫霄玄关散 MP G5"},{17,"九转还魂丹 Full G5"},
+  {23,"天香断续散 Injury G5"},{29,"还阳正气丹 Meridian G5"},
+  {4,"玉洞黑石丹 HP G4"},{10,"济生养气丸 MP G4"},{16,"生生造化丹 Full G4"},
+  {22,"血府逐瘀散 Injury G4"},{28,"三黄宝腊丹 Meridian G4"},
+  {3,"人参养荣丸 HP G3"},{9,"参苓白术散 MP G3"},{15,"天王补心丹 Full G3"},
+}
+local foodDB = {
+  {5,"十全大补汤 Soup G5"},{11,"龙脑酒 Wine G5"},{17,"乳猪 Meat G5"},
+  {23,"杜康酒 Wine G5"},{29,"烩八珍 Soup G5"},
+  {4,"参茸熊掌 Soup G4"},{10,"虎骨酒 Wine G4"},{16,"红烧肉 Meat G4"},
+  {22,"新丰酒 Wine G4"},{28,"四君子汤 Soup G4"},
+  {3,"沙苑甲鱼汤 Soup G3"},{9,"鹿胎酒 Wine G3"},{15,"烧鸡 Meat G3"},
+}
+local horseDB = {
+  {45,"神凫马 spd=95 G5"},{41,"赤兔马 spd=90 G5"},{43,"绝影马 spd=85 G5"},
+  {40,"汗血马 spd=80 G5"},{42,"的卢马 spd=75 G5"},{47,"白龙驹 spd=70 G5"},
+  {36,"斑豹马 spd=80 G4"},{35,"拳毛驹 spd=75 G4"},{33,"白蹄乌 spd=70 G4"},
+}
+local matDB = {
+  {0,"Wood"},{1,"Ore"},{2,"Medicine"},{3,"Food Ingredient"},{4,"Poison"},
+}
+
+-- ============================================================
+-- RVAs (from Il2CppDumper)
+-- ============================================================
+local RVA = {
+  ctor       = 0xCDE970,
+  setBook    = 0xCDDD10,
+  setMat     = 0xCDDE20,
+  clone      = 0xCDB3B0,
+  ildCtor    = 0xCE6310,
+  mergeList  = 0xCE5880,
+  genMedById   = 0x79DD10,
+  genFoodById  = 0x796F20,
+  genHorseById = 0x79D2E0,
+  getItem    = 0x892A30,
+}
+
+local AOB_SIGS = {
+  setBook   = {sig="48 8B 43 68 48 85 C0 0F 84 ?? ?? ?? ?? 89 78 10", off=0x3F},
+  setMat    = {sig="89 6B 18 89 73 3C 89 7B 40", off=0x48},
+  ctor      = {sig="C7 47 44 00 00 80 3F 48 8B CF E8 ?? ?? ?? ?? 89 5F 14 83 FB 06", off=0x6A},
+  clone     = {sig="48 89 5C 24 08 57 48 83 EC 20 48 8B D9 E8 ?? ?? ?? ?? 48 8B F8 48 85 C0 74", off=0},
+}
+
+-- ============================================================
+-- STATE
+-- ============================================================
+local S = {}
+local hookInstalled = false
+
+-- ============================================================
+-- IL2CPP HELPERS
+-- ============================================================
+local WK = { code = nil, data = nil, str = nil }
+
+local function allocWorkArea()
+  if WK.code then return true end
+  -- Clean up stale symbols from previous session.
+  -- IMPORTANT: unhook first if a prior session left Update pointing to old hookCode.
+  if _ia_harmonyPtrSlot and _ia_origChainTarget then
+    pcall(function() writeQword(_ia_harmonyPtrSlot, _ia_origChainTarget) end)
+    _ia_harmonyPtrSlot = nil; _ia_origChainTarget = nil
+  end
+  if _ia_directPatch and _ia_directPatchAddr and _ia_directPatchOrigBytes then
+    local n = _ia_patchLen or #_ia_directPatchOrigBytes
+    pcall(function()
+      for i = 1, n do writeBytes(_ia_directPatchAddr + i - 1, _ia_directPatchOrigBytes[i]) end
+    end)
+    _ia_directPatch = nil; _ia_patchLen = nil
+    if _ia_relayCode then pcall(deAlloc, _ia_relayCode); _ia_relayCode = nil end
+  end
+  sleep(100) -- drain any in-flight Update before freeing hook memory
+  for _, n in ipairs({"cmdBuf","hookCode","origUpdatePtr","wkCode","wkData","wkStr"}) do
+    pcall(function() autoAssemble("unregistersymbol("..n..")\ndealloc("..n..")") end)
+  end
+  local ok = autoAssemble([[
+alloc(wkCode, 512)
+alloc(wkData, 512)
+alloc(wkStr, 256)
+registersymbol(wkCode)
+registersymbol(wkData)
+registersymbol(wkStr)
+wkStr:
+db 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+db 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+wkData:
+dq 0 0 0 0 0 0 0 0
+wkCode:
+ret
+  ]])
+  if not ok then return false end
+  WK.code = getAddress("wkCode")
+  WK.data = getAddress("wkData")
+  WK.str = getAddress("wkStr")
+  return true
+end
+
+local function shellExec(bytesFunc)
+  local p = 0
+  local function w(b) writeBytes(WK.code + p, b); p = p + #b end
+  local function q(a) writeQword(WK.code + p, a); p = p + 8 end
+  local function d(v) writeInteger(WK.code + p, v); p = p + 4 end
+  bytesFunc(w, q, d)
+  createRemoteThread(WK.code)
+end
+
+-- ============================================================
+-- MAIN-THREAD HOOK (pointer-swap approach)
+-- No game code is patched. We swap MethodInfo->methodPointer
+-- to point to our hook, then tail-call the original pointer.
+-- This avoids all RIP-relative instruction relocation issues.
+-- ============================================================
+local function installMainThreadHook()
+  if hookInstalled then return true end
+  log("installMainThreadHook start (pointer-swap)")
+  local base = getAddress("GameAssembly.dll")
+  if not base or base == 0 then return false, "GameAssembly.dll not loaded" end
+  local modSize = getModuleSize("GameAssembly.dll") or 0x10000000
+
+  -- Resolve AOBs (restrict to GameAssembly.dll range)
+  for name, info in pairs(AOB_SIGS) do
+    local r = AOBScan(info.sig, "+X")
+    if r and stringlist_getCount(r) >= 1 then
+      local found = tonumber(stringlist_getString(r, 0), 16)
+      if found >= base and found < base + modSize then
+        RVA[name] = found - info.off - base
+        log("AOB " .. name .. " -> RVA " .. string.format("%X", RVA[name]))
+      end
+      object_destroy(r)
+    end
+  end
+
+  -- Find GameController class via il2cpp API
+  local getMethodFromName = getAddress("GameAssembly.il2cpp_class_get_method_from_name")
+  local domainGet = getAddress("GameAssembly.il2cpp_domain_get")
+  local domainGetAsm = getAddress("GameAssembly.il2cpp_domain_get_assemblies")
+  local imageFromAsm = getAddress("GameAssembly.il2cpp_assembly_get_image")
+  local classFromName = getAddress("GameAssembly.il2cpp_class_from_name")
+  if not getMethodFromName or getMethodFromName == 0 then
+    return false, "il2cpp_class_get_method_from_name not found"
+  end
+  if not classFromName or classFromName == 0 then
+    return false, "il2cpp exports missing"
+  end
+
+  -- Use cached game image from discover()
+  local gameImage = S.gameImage
+  if not gameImage or gameImage == 0 then return false, "Game image not cached (run discover first)" end
+
+  -- Use executeCodeEx (safe) instead of shellExec/createRemoteThread (crashes with BepInEx)
+  local c_hook = _il2cpp_init()
+
+  local function findClassFast(name)
+    local ns = allocateMemory(16); writeString(ns, "")
+    local cn = allocateMemory(64); writeString(cn, name)
+    local k = executeCodeEx(0, nil, classFromName, gameImage, ns, cn)
+    deAlloc(ns); deAlloc(cn)
+    return k ~= 0 and k or nil
+  end
+
+  local gcClass = c_hook.gc.klass
+  log("gcClass=" .. toHex(gcClass))
+
+  -- Get MethodInfo* for Update(0 params) via executeCodeEx
+  local updateNameBuf = allocateMemory(32)
+  writeString(updateNameBuf, "Update")
+  local methodInfo = executeCodeEx(0, nil, getMethodFromName, gcClass, updateNameBuf, 0)
+  deAlloc(updateNameBuf)
+  if not methodInfo or methodInfo == 0 then return false, "Update MethodInfo not found" end
+  log("methodInfo=" .. toHex(methodInfo))
+
+  -- Read the methodPointer (offset 0 of MethodInfo) = code address
+  local updateCodeAddr = readQword(methodInfo)
+  if not updateCodeAddr or updateCodeAddr == 0 then return false, "Update methodPointer is null" end
+  log("updateCodeAddr=" .. toHex(updateCodeAddr))
+
+  -- Read first 6 bytes to check for Harmony/BepInEx trampoline (FF 25 xx xx xx xx)
+  local b1 = readBytes(updateCodeAddr, 1)
+  local b2 = readBytes(updateCodeAddr + 1, 1)
+  log(string.format("First 2 bytes at Update: %02X %02X", b1 or 0, b2 or 0))
+
+  local harmonyPtrSlot = nil
+  local origChainTarget = nil
+
+  if b1 == 0xFF and b2 == 0x25 then
+    -- FF 25 = jmp [rip + disp32]. Decode the disp32.
+    local disp = readInteger(updateCodeAddr + 2)
+    -- disp32 is signed; handle negative values
+    if disp >= 0x80000000 then disp = disp - 0x100000000 end
+    -- RIP-relative: target = addr_after_instruction + disp = (updateCodeAddr + 6) + disp
+    harmonyPtrSlot = updateCodeAddr + 6 + disp
+    origChainTarget = readQword(harmonyPtrSlot)
+    log("Harmony trampoline detected!")
+    log("  ptrSlot=" .. toHex(harmonyPtrSlot) .. " -> chainTarget=" .. toHex(origChainTarget))
+  else
+    -- No Harmony/BepInEx. Use short 5-byte E9 JMP to hookCode (allocated near GameAssembly).
+    -- Only save bytes up to the first instruction boundary >= 5 — avoids RIP-relative relocation.
+    log("No Harmony trampoline — will patch code entry directly")
+    harmonyPtrSlot = nil
+    _ia_directPatch = true
+    _ia_directPatchAddr = updateCodeAddr
+
+    -- Walk instructions to find boundary >= 5 bytes
+    -- CE disassemble() returns a string: "ADDR - XX XX XX - opcode operands"
+    -- We count the hex byte pairs between the two " - " delimiters
+    local boundary = 0
+    while boundary < 5 do
+      local ok, s = pcall(disassemble, updateCodeAddr + boundary)
+      if not ok or type(s) ~= "string" then
+        return false, "Cannot disassemble at Update+" .. boundary
+      end
+      local hexBytes = s:match("%-%s(%x%x[%x ]-)%s%-")
+      if not hexBytes then
+        return false, "Cannot parse disassembly at Update+" .. boundary .. ": " .. s:sub(1, 80)
+      end
+      local instrSize = 0
+      for _ in hexBytes:gmatch("%x%x") do instrSize = instrSize + 1 end
+      if instrSize == 0 then
+        return false, "Zero-length instruction at Update+" .. boundary
+      end
+      boundary = boundary + instrSize
+    end
+    _ia_patchLen = boundary
+    log("Instruction boundary at " .. boundary .. " bytes")
+
+    _ia_directPatchOrigBytes = {}
+    for i = 0, boundary - 1 do
+      _ia_directPatchOrigBytes[i + 1] = readBytes(updateCodeAddr + i, 1) or 0
+    end
+    local origBytesHex = ""
+    for i = 1, boundary do origBytesHex = origBytesHex .. string.format("%02X ", _ia_directPatchOrigBytes[i]) end
+    log("Original " .. boundary .. " bytes at Update: " .. origBytesHex)
+
+    -- Build relay trampoline: [saved bytes] + [FF 25 00 00 00 00] + [updateCodeAddr+boundary]
+    local relaySize = boundary + 6 + 8
+    _ia_relayCode = allocateMemory(relaySize)
+    for i = 1, boundary do writeBytes(_ia_relayCode + i - 1, _ia_directPatchOrigBytes[i]) end
+    writeBytes(_ia_relayCode + boundary, {0xFF, 0x25, 0x00, 0x00, 0x00, 0x00})
+    writeQword(_ia_relayCode + boundary + 6, updateCodeAddr + boundary)
+    origChainTarget = _ia_relayCode
+    log("Relay trampoline at " .. toHex(_ia_relayCode) .. " -> continues at " .. toHex(updateCodeAddr + boundary))
+  end
+
+  -- Use executeCodeEx-based class/method lookup (safe, no shellExec)
+  local function findClassByName(name)
+    return findClassFast(name)
+  end
+
+  local function resolveMethodPtr(klass, methodName, paramCount)
+    local nmBuf = allocateMemory(64)
+    writeString(nmBuf, methodName)
+    local mi = executeCodeEx(0, nil, getMethodFromName, klass, nmBuf, paramCount)
+    deAlloc(nmBuf)
+    if not mi or mi == 0 then return nil end
+    local ptr = readQword(mi)
+    if not ptr or ptr == 0 then return nil end
+    return ptr
+  end
+
+  -- Resolve all methods via il2cpp API (no AOB dependency)
+  local heroClass = findClassByName("HeroData")
+  if not heroClass then return false, "HeroData class not found" end
+  log("heroClass=" .. toHex(heroClass))
+
+  local getItemPtr = resolveMethodPtr(heroClass, "GetItem", 5)
+  if not getItemPtr then return false, "HeroData.GetItem(5) not found" end
+  log("getItemPtr=" .. toHex(getItemPtr))
+
+  -- Resolve SetBookData via il2cpp API (AOB broken after game update)
+  local itemDataClass = findClassByName("ItemData")
+  if not itemDataClass then return false, "ItemData class not found" end
+  log("itemDataClass=" .. toHex(itemDataClass))
+
+  local setBookPtr = resolveMethodPtr(itemDataClass, "SetBookData", 2)
+  if not setBookPtr then return false, "SetBookData(2) not found" end
+  log("setBookPtr=" .. toHex(setBookPtr) .. " RVA=" .. string.format("%X", setBookPtr - base))
+  S.setBookAddr = setBookPtr
+
+  -- Check if GetItem is Harmony-hooked (FF 25 trampoline). If so, unwrap to find the
+  -- original IL2CPP code address so we bypass Harmony's managed hooks.
+  local gi_b1 = readBytes(getItemPtr, 1)
+  local gi_b2 = readBytes(getItemPtr + 1, 1)
+  log(string.format("GetItem first 2 bytes: %02X %02X", gi_b1 or 0, gi_b2 or 0))
+  if gi_b1 == 0xFF and gi_b2 == 0x25 then
+    local gi_disp = readInteger(getItemPtr + 2)
+    if gi_disp >= 0x80000000 then gi_disp = gi_disp - 0x100000000 end
+    local gi_ptrSlot = getItemPtr + 6 + gi_disp
+    local gi_harmonyTarget = readQword(gi_ptrSlot)
+    log("GetItem Harmony trampoline: ptrSlot=" .. toHex(gi_ptrSlot) .. " -> " .. toHex(gi_harmonyTarget))
+
+    -- Harmony stub format: mov r10,DATA(10 bytes); mov rax,DISPATCHER(10 bytes); jmp rax(3 bytes)
+    -- At DATA+0x08: pointer to the original native trampoline (the "real" function)
+    local stub_b1 = readBytes(gi_harmonyTarget, 1)
+    local stub_b2 = readBytes(gi_harmonyTarget + 1, 1)
+    log(string.format("Harmony stub first 2 bytes: %02X %02X", stub_b1 or 0, stub_b2 or 0))
+    if stub_b1 == 0x49 and stub_b2 == 0xBA then
+      -- mov r10, imm64 — read the DATA pointer
+      local dataPtr = readQword(gi_harmonyTarget + 2)
+      log("Harmony DATA ptr=" .. toHex(dataPtr))
+      if dataPtr and dataPtr ~= 0 then
+        -- Read first few qwords from DATA to find original function
+        for off = 0, 0x28, 8 do
+          local candidate = readQword(dataPtr + off)
+          if candidate and candidate ~= 0 then
+            local c1 = readBytes(candidate, 1)
+            local c2 = readBytes(candidate + 1, 1)
+            log(string.format("  DATA+%02X = %s -> %02X %02X", off, toHex(candidate), c1 or 0, c2 or 0))
+            -- Real IL2CPP code typically starts with: 48 89 (mov [rsp+..]), 55 (push rbp), 56 (push rsi), 57 (push rdi)
+            if c1 and (c1 == 0x48 or c1 == 0x55 or c1 == 0x56 or c1 == 0x57 or c1 == 0x40 or c1 == 0x53) then
+              local inRange = (candidate >= base and candidate < base + modSize)
+              if inRange then
+                log("Found original GetItem code at DATA+" .. string.format("%02X", off) .. " = " .. toHex(candidate))
+                getItemPtr = candidate
+                break
+              end
+            end
+          end
+        end
+      end
+    end
+  end
+  log("Resolved: getItem=" .. toHex(getItemPtr))
+
+  _ia_getItemPtr = getItemPtr
+
+  local aa = string.format([[
+alloc(cmdBuf, 256)
+alloc(hookCode, 2048, GameAssembly.dll)
+alloc(origUpdatePtr, 8)
+registersymbol(cmdBuf)
+registersymbol(hookCode)
+registersymbol(origUpdatePtr)
+
+cmdBuf:
+dq 0 0 0 0 0 0 0 0 0 0
+
+origUpdatePtr:
+dq 0
+
+label(doGetItem)
+label(doCreateAndAdd)
+label(doAllocAndCtor)
+label(doGenEquip)
+label(skipSetup)
+label(cmdDone)
+label(cmdError)
+label(noCmd)
+label(tailcall)
+
+hookCode:
+  push rax
+  push rbx
+  mov rbx,cmdBuf
+  mov eax,[rbx+40]
+  inc eax
+  mov [rbx+40],eax
+  mov [rbx+20],rcx
+  cmp dword ptr [rbx+38],1
+  jne noCmd
+  mov eax,[rbx]
+  test eax,eax
+  jz noCmd
+  cmp eax,1
+  je doGetItem
+  cmp eax,2
+  je doCreateAndAdd
+  cmp eax,3
+  je doAllocAndCtor
+  cmp eax,4
+  je doGenEquip
+  mov dword ptr [rbx+04],2
+  mov dword ptr [rbx],0
+  jmp noCmd
+
+doGetItem:
+  push rcx
+  push rdx
+  push r8
+  push r9
+  push r10
+  push r11
+  sub rsp,58
+  mov rcx,[rbx+28]
+  test rcx,rcx
+  jz cmdError
+  mov rdx,[rbx+08]
+  test rdx,rdx
+  jz cmdError
+  xor r8d,r8d
+  inc r8d
+  xor r9d,r9d
+  mov dword ptr [rsp+20],0
+  mov byte ptr [rsp+28],0
+  mov qword ptr [rsp+30],0
+  mov rax,[rbx+30]
+  call rax
+  jmp cmdDone
+
+doCreateAndAdd:
+  push rcx
+  push rdx
+  push r8
+  push r9
+  push r10
+  push r11
+  sub rsp,58
+  mov rcx,[rbx+50]
+  mov rax,[rbx+48]
+  call rax
+  test rax,rax
+  jz cmdError
+  mov [rbx+08],rax
+  mov rcx,rax
+  mov edx,[rbx+10]
+  mov rax,[rbx+58]
+  call rax
+  mov rax,[rbx+60]
+  test rax,rax
+  jz skipSetup
+  mov rcx,[rbx+08]
+  mov edx,[rbx+14]
+  mov r8d,[rbx+18]
+  mov r9d,[rbx+1C]
+  call rax
+skipSetup:
+  mov rcx,[rbx+28]
+  test rcx,rcx
+  jz cmdError
+  mov rdx,[rbx+08]
+  test rdx,rdx
+  jz cmdError
+  xor r8d,r8d
+  inc r8d
+  xor r9d,r9d
+  mov dword ptr [rsp+20],0
+  mov byte ptr [rsp+28],0
+  mov qword ptr [rsp+30],0
+  mov rax,[rbx+30]
+  call rax
+  jmp cmdDone
+
+doAllocAndCtor:
+  push rcx
+  push rdx
+  push r8
+  push r9
+  push r10
+  push r11
+  sub rsp,58
+  mov rcx,[rbx+50]
+  mov rax,[rbx+48]
+  call rax
+  test rax,rax
+  jz cmdError
+  mov [rbx+08],rax
+  mov rcx,rax
+  mov edx,[rbx+10]
+  mov rax,[rbx+58]
+  call rax
+  jmp cmdDone
+
+doGenEquip:
+  push rcx
+  push rdx
+  push r8
+  push r9
+  push r10
+  push r11
+  sub rsp,58
+  mov rcx,[rbx+20]
+  test rcx,rcx
+  jz cmdError
+  mov edx,[rbx+10]
+  mov r8d,[rbx+14]
+  mov eax,[rbx+18]
+  movd xmm2,eax
+  movd xmm3,eax
+  xor r9d,r9d
+  mov qword ptr [rsp+20],0
+  mov rax,[rbx+68]
+  call rax
+  test rax,rax
+  jz cmdError
+  mov [rbx+08],rax
+  jmp cmdDone
+
+cmdDone:
+  add rsp,58
+  pop r11
+  pop r10
+  pop r9
+  pop r8
+  pop rdx
+  pop rcx
+  mov dword ptr [rbx+04],1
+  mov dword ptr [rbx],0
+  jmp noCmd
+
+cmdError:
+  add rsp,58
+  pop r11
+  pop r10
+  pop r9
+  pop r8
+  pop rdx
+  pop rcx
+  mov dword ptr [rbx+04],2
+  mov dword ptr [rbx],0
+
+noCmd:
+  pop rbx
+  pop rax
+
+tailcall:
+  jmp qword ptr [origUpdatePtr]
+]]
+  )
+
+  log("Resolved: getItem=" .. toHex(getItemPtr))
+  log("AA script (first 400):\n" .. aa:sub(1, 400))
+  local ok = autoAssemble(aa)
+  log("autoAssemble returned: " .. tostring(ok))
+  if not ok then return false, "AA failed" end
+
+  local cmdBufAddr = getAddress("cmdBuf")
+  local hookCodeAddr = getAddress("hookCode")
+  local origPtrSlot = getAddress("origUpdatePtr")
+  log("cmdBuf=" .. toHex(cmdBufAddr) .. " hookCode=" .. toHex(hookCodeAddr) .. " origPtrSlot=" .. toHex(origPtrSlot))
+
+  -- Write the chain target (Harmony handler or original code) to origUpdatePtr slot
+  writeQword(origPtrSlot, origChainTarget)
+
+  if harmonyPtrSlot then
+    -- Overwrite Harmony's indirect jump pointer to point to our hook
+    writeQword(harmonyPtrSlot, hookCodeAddr)
+    local verify = readQword(harmonyPtrSlot)
+    if verify ~= hookCodeAddr then return false, "Harmony ptrSlot write failed" end
+    log("Wrote hookCode to Harmony ptrSlot OK")
+
+    -- Store for DISABLE cleanup
+    _ia_harmonyPtrSlot = harmonyPtrSlot
+    _ia_origChainTarget = origChainTarget
+    _ia_methodInfo = nil
+    _ia_origUpdatePtr = nil
+  elseif _ia_directPatch then
+    -- Write 5-byte E9 rel32 JMP + NOPs to fill to instruction boundary
+    -- hookCode is allocated near GameAssembly.dll so rel32 fits
+    local rel32 = hookCodeAddr - (_ia_directPatchAddr + 5)
+    if rel32 < -0x80000000 or rel32 > 0x7FFFFFFF then
+      return false, string.format("hookCode too far for E9 rel32 (diff=%X)", rel32)
+    end
+    -- Handle negative rel32 for signed 32-bit encoding
+    if rel32 < 0 then rel32 = rel32 + 0x100000000 end
+    local patch = {0xE9,
+      rel32 % 256,
+      math.floor(rel32 / 256) % 256,
+      math.floor(rel32 / 65536) % 256,
+      math.floor(rel32 / 16777216) % 256}
+    for i = 6, _ia_patchLen do patch[#patch + 1] = 0x90 end  -- NOP padding
+    writeBytes(_ia_directPatchAddr, patch)
+    local verify = readBytes(_ia_directPatchAddr, 1)
+    if verify ~= 0xE9 then return false, "Direct code patch failed" end
+    log(string.format("Direct E9 patch OK at %s (rel32=%X, padded to %d bytes)",
+        toHex(_ia_directPatchAddr), rel32, _ia_patchLen))
+
+    _ia_harmonyPtrSlot = nil
+    _ia_origChainTarget = nil
+    _ia_methodInfo = nil
+    _ia_origUpdatePtr = nil
+  end
+
+  log("Hook pointer written — verifying heartbeat...")
+
+  -- Verify the hook is actually running by watching the heartbeat counter
+  local cmdBufAddr = getAddress("cmdBuf")
+  local hb1 = readInteger(cmdBufAddr + 0x40) or 0
+  sleep(200)  -- wait ~12 frames at 60fps
+  local hb2 = readInteger(cmdBufAddr + 0x40) or 0
+  log(string.format("Heartbeat check: before=%d after=%d (delta=%d)", hb1, hb2, hb2 - hb1))
+
+  if hb2 <= hb1 then
+    log("ERROR: Heartbeat not incrementing — hook is NOT running!")
+    -- Restore original pointer to avoid leaving broken hook
+    if harmonyPtrSlot then
+      writeQword(harmonyPtrSlot, origChainTarget)
+      log("Restored Harmony pointer after failed heartbeat")
+    elseif _ia_directPatch and _ia_directPatchOrigBytes then
+      local n = _ia_patchLen or #_ia_directPatchOrigBytes
+      for i = 1, n do writeBytes(_ia_directPatchAddr + i - 1, _ia_directPatchOrigBytes[i]) end
+      log("Restored original bytes after failed heartbeat")
+      _ia_directPatch = nil; _ia_patchLen = nil
+      if _ia_relayCode then deAlloc(_ia_relayCode); _ia_relayCode = nil end
+    end
+    return false, "Hook installed but not running (heartbeat=0). Game may not call Update through this path."
+  end
+
+  -- Hook is running! Now enable command processing.
+  writeInteger(cmdBufAddr + 0x38, 1)
+  log("Hook verified and commands ENABLED")
+
+  log("Hook installed OK")
+  hookInstalled = true
+  return true
+end
+
+-- ============================================================
+-- DISCOVERY
+-- ============================================================
+local function discover()
+  logOpen()
+  log("=== discover() start ===")
+  S = {}
+  S.base = getAddress("GameAssembly.dll")
+  log("S.base = " .. toHex(S.base))
+  if not S.base or S.base == 0 then return false, "GameAssembly.dll not loaded" end
+  if not allocWorkArea() then return false, "Work area alloc failed" end
+
+  local classFromName = getAddress("GameAssembly.il2cpp_class_from_name")
+  local objNew = getAddress("GameAssembly.il2cpp_object_new")
+  if not objNew or objNew == 0 then return false, "il2cpp exports missing" end
+  S.objNew = objNew
+
+  -- Use executeCodeEx (proven safe) instead of shellExec/createRemoteThread (crashes)
+  local c = _il2cpp_init()
+  local gameImage = c.img
+  S.gameImage = gameImage
+  log("Game image from _il2cpp_init: " .. toHex(gameImage))
+
+  local function findClass(name)
+    local ns = allocateMemory(16); writeString(ns, "")
+    local cn = allocateMemory(64); writeString(cn, name)
+    local k = executeCodeEx(0, nil, classFromName, gameImage, ns, cn)
+    deAlloc(ns); deAlloc(cn)
+    return k ~= 0 and k or nil
+  end
+
+  log("About to findClass GameController...")
+  local gcClass = findClass("GameController")
+  log("gcClass=" .. toHex(gcClass or 0))
+  if not gcClass or gcClass == 0 then return false, "GameController not found" end
+  log("About to findClass GameDataController...")
+  local gdcClass = findClass("GameDataController")
+  log("gdcClass=" .. toHex(gdcClass or 0))
+
+  local gc = readQword(c.gc.static + c.gc.instOff)
+  if not gc or gc == 0 then return false, "GC._instance null (load save)" end
+  S.gc = gc
+  log("gc=" .. toHex(gc))
+
+  if gdcClass then
+    if c:ensure("gdc", "GameDataController", 0x20) then
+      S.gdc = readQword(c.gdc.static + c.gdc.instOff)
+    end
+  end
+
+  local wd = readQword(gc + 0x20)
+  if not wd or wd == 0 then return false, "WorldData null" end
+  local hl = readQword(wd + 0x50)
+  if not hl or hl == 0 then return false, "HerosList null" end
+  local ip = readQword(hl + 0x10)
+  if not ip or ip == 0 then return false, "HerosList items null" end
+  local ph = readQword(ip + 0x20)
+  if not ph or ph == 0 then return false, "Hero not found" end
+  S.hero = ph
+  local ild = readQword(ph + 0x220)
+  if not ild or ild == 0 then return false, "ItemListData null" end
+  S.ild = ild
+  S.ildKlass = readQword(S.ild)
+  log("hero=" .. toHex(ph) .. " ild=" .. toHex(ild))
+
+  local ail = readQword(S.ild + 0x28)
+  if not ail or ail == 0 then return false, "allItem list null" end
+  local ic = readInteger(ail + 0x18)
+  local ia = readQword(ail + 0x10)
+  for i = 0, ic - 1 do
+    local it = readQword(ia + 0x20 + i * 8)
+    if it and it ~= 0 then
+      if not S.itemKlass then S.itemKlass = readQword(it) end
+    end
+  end
+  if not S.itemKlass then return false, "No items in inventory" end
+
+  -- Install main-thread hook
+  local hookOk, hookErr = installMainThreadHook()
+  if not hookOk then return false, "Hook: " .. (hookErr or "unknown") end
+
+  local cmdBuf = getAddress("cmdBuf")
+  S.cmdBuf = cmdBuf
+  writeQword(cmdBuf + 0x28, S.hero)
+  writeQword(cmdBuf + 0x30, _ia_getItemPtr or 0)
+  writeQword(cmdBuf + 0x48, S.objNew)
+  writeQword(cmdBuf + 0x50, S.itemKlass)
+  writeQword(cmdBuf + 0x58, S.base + RVA.ctor)
+
+  S.ready = true
+  log("discover() OK: " .. ic .. " items")
+  return true, string.format("OK! %d items. Hook:Y GDC:%s", ic, S.gdc and "Y" or "N")
+end
+
+-- ============================================================
+-- MAIN-THREAD COMMAND DISPATCH
+-- ============================================================
+local function mainThreadGetItem(itemDataPtr, timeout)
+  if not S.cmdBuf then return false, "Not connected" end
+  timeout = timeout or 3000
+  writeQword(S.cmdBuf + 0x08, itemDataPtr)
+  writeQword(S.cmdBuf + 0x28, S.hero or 0)
+  writeQword(S.cmdBuf + 0x30, _ia_getItemPtr or 0)
+  writeInteger(S.cmdBuf + 0x04, 0)
+  writeInteger(S.cmdBuf, 1)
+  local elapsed = 0
+  while elapsed < timeout do
+    local status = readInteger(S.cmdBuf + 0x04)
+    if status == 1 then
+      return true, readQword(S.cmdBuf + 0x18)
+    elseif status == 2 then
+      return false, "Command failed (status=2)"
+    end
+    sleep(16)
+    elapsed = elapsed + 16
+  end
+  local st = readInteger(S.cmdBuf + 0x04)
+  local gc = readQword(S.cmdBuf + 0x20)
+  local cmdVal = readInteger(S.cmdBuf) or 0
+  return false, string.format("Timeout cmd=%d st=%d gc=%X", cmdVal, st, gc or 0)
+end
+
+local function mainThreadCreateAndAdd(itemType, setupFunc, arg1, arg2, arg3, timeout)
+  if not S.cmdBuf then return false, "Not connected" end
+  timeout = timeout or 3000
+  writeInteger(S.cmdBuf + 0x10, itemType)
+  writeInteger(S.cmdBuf + 0x14, arg1 or 0)
+  writeInteger(S.cmdBuf + 0x18, arg2 or 0)
+  writeInteger(S.cmdBuf + 0x1C, arg3 or 0)
+  writeQword(S.cmdBuf + 0x28, S.hero or 0)
+  writeQword(S.cmdBuf + 0x30, _ia_getItemPtr or 0)
+  writeQword(S.cmdBuf + 0x48, S.objNew)
+  writeQword(S.cmdBuf + 0x50, S.itemKlass)
+  writeQword(S.cmdBuf + 0x58, S.base + RVA.ctor)
+  writeQword(S.cmdBuf + 0x60, setupFunc or 0)
+  writeInteger(S.cmdBuf + 0x04, 0)
+  writeInteger(S.cmdBuf, 2)
+  local elapsed = 0
+  while elapsed < timeout do
+    local status = readInteger(S.cmdBuf + 0x04)
+    if status == 1 then return true, readQword(S.cmdBuf + 0x08) end
+    if status == 2 then return false, "CreateAndAdd failed" end
+    sleep(16)
+    elapsed = elapsed + 16
+  end
+  return false, "Timeout"
+end
+
+local function mainThreadAllocCtor(itemType, timeout)
+  if not S.cmdBuf then return false, "Not connected" end
+  timeout = timeout or 3000
+  writeInteger(S.cmdBuf + 0x10, itemType)
+  writeQword(S.cmdBuf + 0x48, S.objNew)
+  writeQword(S.cmdBuf + 0x50, S.itemKlass)
+  writeQword(S.cmdBuf + 0x58, S.base + RVA.ctor)
+  writeInteger(S.cmdBuf + 0x04, 0)
+  writeInteger(S.cmdBuf, 3)
+  local elapsed = 0
+  while elapsed < timeout do
+    local status = readInteger(S.cmdBuf + 0x04)
+    if status == 1 then return true, readQword(S.cmdBuf + 0x08) end
+    if status == 2 then return false, "AllocCtor failed" end
+    sleep(16)
+    elapsed = elapsed + 16
+  end
+  return false, "Timeout"
+end
+
+-- ============================================================
+-- HELPERS
+-- ============================================================
+local function getItemName(ptr)
+  if not ptr or ptr == 0 then return "?" end
+  local np = readQword(ptr + 0x20)
+  if not np or np == 0 then return "?" end
+  local nl = readInteger(np + 0x10)
+  if not nl or nl <= 0 or nl > 200 then return "?" end
+  return readString(np + 0x14, nl * 2, true) or "?"
+end
+
+local function allocItem()
+  writeQword(WK.data, 0)
+  shellExec(function(w, q)
+    w({0x48,0x83,0xEC,0x28})
+    w({0x48,0xB9}); q(S.itemKlass)
+    w({0x48,0xB8}); q(S.objNew); w({0xFF,0xD0})
+    w({0x48,0xA3}); q(WK.data)
+    w({0x48,0x83,0xC4,0x28}); w({0xC3})
+  end)
+  sleep(300)
+  return readQword(WK.data)
+end
+
+local function callFunc(thisPtr, funcRVA, arg1, arg2, arg3)
+  shellExec(function(w, q, d)
+    w({0x48,0x83,0xEC,0x28})
+    w({0x48,0xB9}); q(thisPtr)
+    if arg1 then w({0xBA}); d(arg1) else w({0x33,0xD2}) end
+    if arg2 then w({0x41,0xB8}); d(arg2) else w({0x45,0x33,0xC0}) end
+    if arg3 then w({0x41,0xB9}); d(arg3) else w({0x4D,0x31,0xC9}) end
+    w({0x48,0xB8}); q(S.base + funcRVA); w({0xFF,0xD0})
+    w({0x48,0x83,0xC4,0x28}); w({0xC3})
+  end)
+  sleep(300)
+end
+
+local function mergeIntoInventory(itemPtr)
+  writeQword(WK.data + 0x10, 0)
+  shellExec(function(w, q)
+    w({0x48,0x83,0xEC,0x28})
+    w({0x48,0xB9}); q(S.ildKlass); w({0x48,0xB8}); q(S.objNew); w({0xFF,0xD0})
+    w({0x48,0x85,0xC0}); w({0x74,0x35})
+    w({0x48,0xA3}); q(WK.data + 0x10)
+    w({0x48,0x8B,0xC8}); w({0x33,0xD2})
+    w({0x48,0xB8}); q(S.base + RVA.ildCtor); w({0xFF,0xD0})
+    w({0x48,0xA1}); q(WK.data + 0x10)
+    w({0x48,0x8B,0x48,0x28}); w({0x48,0x8B,0x51,0x10})
+    w({0x48,0xB8}); q(itemPtr)
+    w({0x48,0x89,0x42,0x20})
+    w({0xC7,0x41,0x18,0x01,0x00,0x00,0x00})
+    w({0x48,0xB9}); q(S.ild)
+    w({0x48,0xA1}); q(WK.data + 0x10)
+    w({0x48,0x8B,0xD0}); w({0x45,0x33,0xC0})
+    w({0x48,0xB8}); q(S.base + RVA.mergeList); w({0xFF,0xD0})
+    w({0x48,0x83,0xC4,0x28}); w({0xC3})
+  end)
+  sleep(400)
+end
+
+-- ============================================================
+-- ADD FUNCTIONS
+-- ============================================================
+local function addBook(skillID, rareLv)
+  if not S.ready then return false, "Connect first" end
+  local ok, ptr = mainThreadCreateAndAdd(3, S.setBookAddr, skillID, rareLv, 0)
+  if not ok then return false, ptr end
+  return true, getItemName(ptr)
+end
+
+local function addMaterial(subType, itemLv, rareLv)
+  if not S.ready then return false, "Connect first" end
+  local ok, ptr = mainThreadCreateAndAdd(5, S.base + RVA.setMat, subType, itemLv, rareLv)
+  if not ok then return false, ptr end
+  return true, getItemName(ptr)
+end
+
+local function addMedFood(dbIndex, dbOffset)
+  if not S.ready then return false, "Connect first" end
+  if not S.gdc or S.gdc == 0 then return false, "GDC not found" end
+
+  -- Read template from database: gdc + dbOffset -> List -> items[dbIndex]
+  local db = readQword(S.gdc + dbOffset)
+  if not db or db == 0 then return false, "Database null at offset " .. string.format("%X", dbOffset) end
+  local items = readQword(db + 0x10)
+  local count = readInteger(db + 0x18)
+  if dbIndex >= count then return false, string.format("Index %d >= count %d", dbIndex, count) end
+  local template = readQword(items + 0x20 + dbIndex * 8)
+  if not template or template == 0 then return false, "Template null" end
+
+  -- Create new ItemData, init as med(1) or food(2) — on main thread
+  local itemType = (dbOffset == 0x110) and 1 or 2
+  local ok2, ni = mainThreadAllocCtor(itemType)
+  if not ok2 or not ni or ni == 0 then return false, "alloc fail" end
+
+  -- Copy fields from template to new item (offsets from current build)
+  writeInteger(ni + 0x10, readInteger(template + 0x10) or 0)  -- itemID
+  writeInteger(ni + 0x18, readInteger(template + 0x18) or 0)  -- subType
+  writeQword(ni + 0x20, readQword(template + 0x20) or 0)      -- name
+  writeQword(ni + 0x28, readQword(template + 0x28) or 0)      -- checkName
+  writeQword(ni + 0x30, readQword(template + 0x30) or 0)      -- describe
+  writeInteger(ni + 0x38, readInteger(template + 0x38) or 0)   -- value
+  writeInteger(ni + 0x3C, readInteger(template + 0x3C) or 0)   -- itemLv
+  writeInteger(ni + 0x40, readInteger(template + 0x40) or 0)   -- rareLv
+  writeFloat(ni + 0x44, readFloat(template + 0x44) or 0)       -- weight
+  -- medFoodData at offset 0x68
+  local templateMFD = readQword(template + 0x68)
+  if templateMFD and templateMFD ~= 0 then
+    writeQword(ni + 0x68, templateMFD)
+  end
+
+  -- Add to inventory via main-thread GetItem
+  local ok, result = mainThreadGetItem(ni)
+  if not ok then return false, result end
+  return true, getItemName(ni)
+end
+
+local function addHorse(dbIndex)
+  if not S.ready then return false, "Connect first" end
+  if not S.gdc or S.gdc == 0 then return false, "GDC not found" end
+
+  -- Read template from horseDataBase (offset 0x120)
+  local db = readQword(S.gdc + 0x120)
+  if not db or db == 0 then return false, "HorseDataBase null" end
+  local items = readQword(db + 0x10)
+  local count = readInteger(db + 0x18)
+  if dbIndex >= count then return false, string.format("Index %d >= count %d", dbIndex, count) end
+  local template = readQword(items + 0x20 + dbIndex * 8)
+  if not template or template == 0 then return false, "Template null" end
+
+  -- Create new ItemData, init as horse (type=6) — on main thread
+  local ok2, ni = mainThreadAllocCtor(6)
+  if not ok2 or not ni or ni == 0 then return false, "alloc fail" end
+
+  -- Copy fields from template
+  writeInteger(ni + 0x10, readInteger(template + 0x10) or 0)  -- itemID
+  writeInteger(ni + 0x18, readInteger(template + 0x18) or 0)  -- subType
+  writeQword(ni + 0x20, readQword(template + 0x20) or 0)      -- name
+  writeQword(ni + 0x28, readQword(template + 0x28) or 0)      -- checkName
+  writeQword(ni + 0x30, readQword(template + 0x30) or 0)      -- describe
+  writeInteger(ni + 0x38, readInteger(template + 0x38) or 0)   -- value
+  writeInteger(ni + 0x3C, readInteger(template + 0x3C) or 0)   -- itemLv
+  writeInteger(ni + 0x40, readInteger(template + 0x40) or 0)   -- rareLv
+  writeFloat(ni + 0x44, readFloat(template + 0x44) or 0)       -- weight
+  -- horseData at offset 0x88 — clone template then set 100% tame
+  local templateHD = readQword(template + 0x88)
+  if templateHD and templateHD ~= 0 then
+    -- Allocate new HorseData object so we don't modify the template
+    local hdClass = readQword(templateHD) -- klass ptr from template object
+    local newHD = executeCodeEx(0, nil, S.objNew, hdClass)
+    if newHD and newHD ~= 0 then
+      -- Copy all fields from template (0x10 to 0x44 = 52 bytes of data)
+      for off = 0x10, 0x44, 4 do
+        writeInteger(newHD + off, readInteger(templateHD + off) or 0)
+      end
+      -- Set favorRate to 1.0 (100% tame)
+      writeFloat(newHD + 0x3C, 1.0)
+      writeQword(ni + 0x88, newHD)
+    else
+      -- Fallback: share template HorseData
+      writeQword(ni + 0x88, templateHD)
+    end
+  end
+
+  -- Add to inventory via main-thread GetItem
+  local ok, result = mainThreadGetItem(ni)
+  if not ok then return false, result end
+  return true, getItemName(ni)
+end
+
+-- ============================================================
+-- EQUIPMENT / TREASURE GENERATOR
+-- ============================================================
+-- Generator RVAs from snapshot (f7.8):
+local EQUIP_GEN_RVA = {
+  Weapon4  = 0x7A73C0,  -- GenerateWeapon(int idx, int bossLv, float rate)
+  Weapon5  = 0x7A7C70,  -- GenerateWeapon(int idx, int bossLv, int weaponType, float rate, ??)
+  Armor    = 0x795B70,  -- GenerateArmor(int idx, int bossLv, float rate)
+  Helmet   = 0x79A490,  -- GenerateHelmet(int idx, int bossLv, float rate)
+  Shoes    = 0x7A5480,  -- GenerateShoes(int idx, int bossLv, float rate)
+}
+
+-- DB offsets on GDC: weapon=0xF0, armor=0xF8, helmet=0x100, shoes=0x108
+local equipDBs = {
+  {name="Weapon",     off=0xF0,  genRVA=0x7A73C0},
+  {name="Armor",      off=0xF8,  genRVA=0x795B70},
+  {name="Helmet",     off=0x100, genRVA=0x79A490},
+  {name="Shoes",      off=0x108, genRVA=0x7A5480},
+  {name="Accessory",  off=nil,   genRVA=0x797A70,
+   staticItems={"香囊 Sachet","羽扇 Fan","扳指 Ring","玉佩 Pendant","腰带 Belt","面具 Mask"}},
+  {name="HorseArmor", off=nil,  genRVA=0x79E450,
+   staticItems={"鞍具 Saddle"}},
+}
+
+-- Treasure types (separate from equipment)
+-- GenerateTreasure(3) RVA=0x7A7310: edx=rareLv, r8d=treasureType, xmm3=float
+local TREASURE_GEN_RVA = 0x7A7310
+local treasureTypes = {
+  "乐器 Instrument","棋谱 Chess Manual","字帖 Calligraphy","画本 Painting","香炉 Incense Burner",
+  "服饰 Clothing","珠玉 Jewel","酒器 Wine Vessel","史书 History Book","典籍 Classic Text",
+}
+
+local function addTreasure(typeIdx, rareLv, timeout)
+  if not S.ready or not S.cmdBuf then return false, "Connect first" end
+  timeout = timeout or 3000
+  -- edx=typeIdx, r8d=rareLv (same swap pattern as GenerateWeapon)
+  writeInteger(S.cmdBuf + 0x10, typeIdx)
+  writeInteger(S.cmdBuf + 0x14, rareLv)
+  writeFloat(S.cmdBuf + 0x18, 1.0)
+  writeQword(S.cmdBuf + 0x68, S.base + TREASURE_GEN_RVA)
+  writeInteger(S.cmdBuf + 0x04, 0)
+  writeInteger(S.cmdBuf, 4)
+  local elapsed = 0
+  while elapsed < timeout do
+    local status = readInteger(S.cmdBuf + 0x04)
+    if status == 1 then
+      local newItem = readQword(S.cmdBuf + 0x08)
+      if not newItem or newItem == 0 then return false, "Generator returned null" end
+      local itemName = getItemName(newItem)
+      local ok2, _ = mainThreadGetItem(newItem)
+      if not ok2 then return false, "GetItem failed" end
+      return true, itemName
+    elseif status == 2 then
+      return false, "Generator failed"
+    end
+    sleep(16)
+    elapsed = elapsed + 16
+  end
+  return false, "Timeout"
+end
+
+-- Call game's Generate[Equip] on main thread via cmdBuf cmd=4.
+-- hookCode reads: cmdBuf+0x10=dbIndex, +0x14=bossLv, +0x18=qualityRate(float), +0x68=genFuncAddr
+-- hookCode sets: cmdBuf+0x08=resulting ItemData*
+local function addEquipGenerated(genRVA, dbIndex, bossLv, qualityRate, timeout)
+  if not S.ready or not S.cmdBuf then return false, "Connect first" end
+  timeout = timeout or 3000
+
+  -- Write parameters to cmdBuf
+  -- hookCode reads: +0x10=edx(param1), +0x14=r8d(param2), +0x18=xmm3(param3 float)
+  -- PARAMS SWAPPED: edx=bossLv, r8d=weaponIndex (confirmed by test: idx=35 power=20 → got weapon 20)
+  writeInteger(S.cmdBuf + 0x10, bossLv)        -- param1 (edx): boss level (stat scaling)
+  writeInteger(S.cmdBuf + 0x14, dbIndex)       -- param2 (r8): weapon/armor DB index
+  writeFloat(S.cmdBuf + 0x18, qualityRate or 1.0) -- param3 (xmm3): quality rate
+  writeQword(S.cmdBuf + 0x68, S.base + genRVA)
+
+  -- Trigger cmd=4
+  writeInteger(S.cmdBuf + 0x04, 0)  -- clear status
+  writeInteger(S.cmdBuf, 4)         -- set command
+
+  -- Wait for completion
+  local elapsed = 0
+  while elapsed < timeout do
+    local status = readInteger(S.cmdBuf + 0x04)
+    if status == 1 then
+      local newItem = readQword(S.cmdBuf + 0x08)
+      if not newItem or newItem == 0 then return false, "Generator returned null" end
+      local itemName = getItemName(newItem)
+      log("Generated: " .. itemName .. " at " .. toHex(newItem))
+      -- Now add to inventory via cmd=1
+      local ok2, _ = mainThreadGetItem(newItem)
+      if not ok2 then return false, "GetItem failed" end
+      return true, itemName
+    elseif status == 2 then
+      return false, "Generator failed (status=2)"
+    end
+    sleep(16)
+    elapsed = elapsed + 16
+  end
+  return false, "Generator timeout"
+end
+
+local function addEquipment(dbOff, dbIndex, desiredLv, desiredRare)
+  if not S.ready then return false, "Connect first" end
+  if not S.gdc or S.gdc == 0 then return false, "GDC not found" end
+
+  local db = readQword(S.gdc + dbOff)
+  if not db or db == 0 then return false, "DataBase null" end
+  local items = readQword(db + 0x10)
+  local count = readInteger(db + 0x18)
+  if dbIndex >= count then return false, string.format("Index %d >= count %d", dbIndex, count) end
+  local template = readQword(items + 0x20 + dbIndex * 8)
+  if not template or template == 0 then return false, "Template null" end
+
+  -- Create new ItemData (type=0 for equipment)
+  local ok2, ni = mainThreadAllocCtor(0)
+  if not ok2 or not ni or ni == 0 then return false, "alloc fail" end
+
+  -- Copy base ItemData fields from template
+  writeInteger(ni + 0x10, readInteger(template + 0x10) or 0)  -- itemID
+  writeInteger(ni + 0x18, readInteger(template + 0x18) or 0)  -- subType
+  writeQword(ni + 0x20, readQword(template + 0x20) or 0)      -- name
+  writeQword(ni + 0x28, readQword(template + 0x28) or 0)      -- checkName
+  writeQword(ni + 0x30, readQword(template + 0x30) or 0)      -- describe
+  writeInteger(ni + 0x38, readInteger(template + 0x38) or 0)   -- value
+  writeInteger(ni + 0x3C, desiredLv or 3)                       -- itemLv
+  writeInteger(ni + 0x40, desiredRare or 5)                     -- rareLv
+  writeFloat(ni + 0x44, readFloat(template + 0x44) or 1.0)     -- weight
+
+  -- Clone EquipmentData and generate stats from best existing equipment
+  local templateEqd = readQword(template + 0x60)
+  if templateEqd and templateEqd ~= 0 then
+    local eqdClass = readQword(templateEqd)
+    local newEqd = executeCodeEx(0, nil, S.objNew, eqdClass)
+    if newEqd and newEqd ~= 0 then
+      -- Copy all EquipmentData fields (0x10 to 0x4C)
+      for off = 0x10, 0x4C, 4 do
+        writeInteger(newEqd + off, readInteger(templateEqd + off) or 0)
+      end
+      writeQword(newEqd + 0x38, readQword(templateEqd + 0x38) or 0) -- animName
+      writeQword(newEqd + 0x40, readQword(templateEqd + 0x40) or 0) -- equipPoisonData
+
+      -- Find best existing equipment in inventory to clone stats from
+      local bestBaseAdd = nil
+      local bestExtraAdd = nil
+      local bestLv = -1
+      local heroIld = readQword(S.hero + 0x220)
+      if heroIld and heroIld ~= 0 then
+        local heroAllItem = readQword(heroIld + 0x28)
+        if heroAllItem and heroAllItem ~= 0 then
+          local heroItemCount = readInteger(heroAllItem + 0x18) or 0
+          local heroItemArr = readQword(heroAllItem + 0x10)
+          if heroItemArr and heroItemArr ~= 0 then
+            for ii = 0, heroItemCount - 1 do
+              local invItem = readQword(heroItemArr + 0x20 + ii * 8)
+              if invItem and invItem ~= 0 and readInteger(invItem + 0x14) == 0 then
+                local invEqd = readQword(invItem + 0x60)
+                if invEqd and invEqd ~= 0 then
+                  local invLv = readInteger(invItem + 0x3C) or 0
+                  if invLv > bestLv then
+                    bestLv = invLv
+                    bestBaseAdd = readQword(invEqd + 0x20)
+                    bestExtraAdd = readQword(invEqd + 0x28)
+                  end
+                end
+              end
+            end
+          end
+        end
+      end
+
+      -- Copy stat pointers from best existing equipment (pure memory, no executeCodeEx)
+      if bestBaseAdd and bestBaseAdd ~= 0 then
+        writeQword(newEqd + 0x20, bestBaseAdd)
+        log("Copied baseAddData from lv " .. bestLv .. " equipment")
+      else
+        writeQword(newEqd + 0x20, readQword(templateEqd + 0x20) or 0)
+      end
+
+      if bestExtraAdd and bestExtraAdd ~= 0 then
+        writeQword(newEqd + 0x28, bestExtraAdd)
+      else
+        writeQword(newEqd + 0x28, readQword(templateEqd + 0x28) or 0)
+      end
+
+      writeQword(ni + 0x60, newEqd)
+    else
+      writeQword(ni + 0x60, templateEqd) -- fallback
+    end
+  end
+
+  local ok, result = mainThreadGetItem(ni)
+  if not ok then return false, result end
+  return true, getItemName(ni)
+end
+
+-- ============================================================
+-- GUI
+-- ============================================================
+local frm = createForm(false)
+_itemAdderForm = frm
+frm.Caption = "LongYinLiZhiZhuan Item Adder v4 (Full Main Thread)"
+frm.Width = 520; frm.Height = 580
+frm.Position = "poScreenCenter"; frm.BorderStyle = "bsSingle"
+
+local Y = 10
+local lblStatus = createLabel(frm)
+lblStatus.Left = 10; lblStatus.Top = 445; lblStatus.Width = 500
+lblStatus.Caption = "Click Connect first"; lblStatus.Font.Color = 0x808080
+local function setStatus(msg, color) lblStatus.Caption = msg; lblStatus.Font.Color = color or 0 end
+
+local btnConn = createButton(frm)
+btnConn.Left = 10; btnConn.Top = Y; btnConn.Width = 130; btnConn.Height = 28
+btnConn.Caption = "Connect to Game"
+btnConn.OnClick = function()
+  setStatus("Connecting...", 0x008080)
+  local ok, msg = discover()
+  setStatus(ok and msg or ("ERR: " .. msg), ok and 0x008000 or 0x0000FF)
+  if ok then pcall(function() _refreshEqItemsFn() end) end
+end
+Y = Y + 38
+
+lbl = createLabel(frm); lbl.Left = 10; lbl.Top = Y; lbl.Caption = "Martial Arts Book (G5)"
+lbl.Font.Size = 9; lbl.Font.Style = "fsBold"; Y = Y + 20
+local cmbSk = createComboBox(frm); cmbSk.Left = 10; cmbSk.Top = Y; cmbSk.Width = 320
+for _, s in ipairs(skillDB) do cmbSk.Items.add(string.format("[%d] %s", s[1], s[2])) end
+cmbSk.ItemIndex = 0
+local edtID = createEdit(frm); edtID.Left = 340; edtID.Top = Y; edtID.Width = 50; edtID.Text = ""
+local lblIDHint = createLabel(frm); lblIDHint.Left = 342; lblIDHint.Top = Y - 14; lblIDHint.Caption = "ID 0-999"; lblIDHint.Font.Size = 7; lblIDHint.Font.Color = 0x808080
+local btnBook = createButton(frm); btnBook.Left = 400; btnBook.Top = Y - 2; btnBook.Width = 100; btnBook.Height = 24
+btnBook.Caption = "Add Book"
+btnBook.OnClick = function()
+  if not S.ready then setStatus("Connect first!", 0x0000FF); return end
+  local sid = edtID.Text ~= "" and tonumber(edtID.Text) or skillDB[cmbSk.ItemIndex + 1][1]
+  setStatus("Adding...", 0x008080)
+  local ok, msg = addBook(sid, 5)
+  setStatus(ok and ("Added: " .. msg) or ("ERR: " .. msg), ok and 0x008000 or 0x0000FF)
+end
+Y = Y + 32
+
+lbl = createLabel(frm); lbl.Left = 10; lbl.Top = Y; lbl.Caption = "Material"
+lbl.Font.Size = 9; lbl.Font.Style = "fsBold"; Y = Y + 20
+local cmbMT = createComboBox(frm); cmbMT.Left = 10; cmbMT.Top = Y; cmbMT.Width = 140
+for _, m in ipairs(matDB) do cmbMT.Items.add(m[1] .. "-" .. m[2]) end; cmbMT.ItemIndex = 1
+local lblML = createLabel(frm); lblML.Left = 160; lblML.Top = Y + 3; lblML.Caption = "Lv:"
+local cmbML = createComboBox(frm); cmbML.Left = 180; cmbML.Top = Y; cmbML.Width = 35
+for i = 0, 5 do cmbML.Items.add(tostring(i)) end; cmbML.ItemIndex = 5
+local btnMat = createButton(frm); btnMat.Left = 400; btnMat.Top = Y - 2; btnMat.Width = 100; btnMat.Height = 24
+btnMat.Caption = "Add Material"
+btnMat.OnClick = function()
+  if not S.ready then setStatus("Connect first!", 0x0000FF); return end
+  setStatus("Adding...", 0x008080)
+  local ok, msg = addMaterial(cmbMT.ItemIndex, cmbML.ItemIndex, 5)
+  setStatus(ok and ("Added: " .. msg) or ("ERR: " .. msg), ok and 0x008000 or 0x0000FF)
+end
+Y = Y + 32
+
+lbl = createLabel(frm); lbl.Left = 10; lbl.Top = Y; lbl.Caption = "Horse"
+lbl.Font.Size = 9; lbl.Font.Style = "fsBold"; Y = Y + 20
+local cmbHr = createComboBox(frm); cmbHr.Left = 10; cmbHr.Top = Y; cmbHr.Width = 320
+for _, h in ipairs(horseDB) do cmbHr.Items.add(string.format("[%d] %s", h[1], h[2])) end; cmbHr.ItemIndex = 0
+local btnHr = createButton(frm); btnHr.Left = 400; btnHr.Top = Y - 2; btnHr.Width = 100; btnHr.Height = 24
+btnHr.Caption = "Add Horse"
+btnHr.OnClick = function()
+  if not S.ready then setStatus("Connect first!", 0x0000FF); return end
+  setStatus("Adding...", 0x008080)
+  local ok, msg = addHorse(horseDB[cmbHr.ItemIndex + 1][1])
+  setStatus(ok and ("Added: " .. msg) or ("ERR: " .. msg), ok and 0x008000 or 0x0000FF)
+end
+Y = Y + 32
+
+lbl = createLabel(frm); lbl.Left = 10; lbl.Top = Y; lbl.Caption = "Equipment (Weapon/Armor/Helmet/Shoes)"
+lbl.Font.Size = 9; lbl.Font.Style = "fsBold"; Y = Y + 20
+local cmbEqType = createComboBox(frm); cmbEqType.Left = 10; cmbEqType.Top = Y; cmbEqType.Width = 80
+for _, e in ipairs(equipDBs) do cmbEqType.Items.add(e.name) end; cmbEqType.ItemIndex = 0
+local cmbEqItem = createComboBox(frm); cmbEqItem.Left = 100; cmbEqItem.Top = Y; cmbEqItem.Width = 160
+local lblEqLv = createLabel(frm); lblEqLv.Left = 270; lblEqLv.Top = Y + 3; lblEqLv.Caption = "Rarity:"
+local cmbEqRare = createComboBox(frm); cmbEqRare.Left = 310; cmbEqRare.Top = Y; cmbEqRare.Width = 90
+cmbEqRare.Items.add("0 White"); cmbEqRare.Items.add("1 Normal"); cmbEqRare.Items.add("2 Good")
+cmbEqRare.Items.add("3 Excellent"); cmbEqRare.Items.add("4 Perfect"); cmbEqRare.Items.add("5 Legendary")
+cmbEqRare.ItemIndex = 5
+
+-- Populate equipment dropdown based on selected type
+local function refreshEqItems()
+  cmbEqItem.Items.clear()
+  local dbInfo = equipDBs[cmbEqType.ItemIndex + 1]
+  if dbInfo.staticItems then
+    -- Accessories/decorations: fixed type list, no database needed
+    for i, name in ipairs(dbInfo.staticItems) do
+      cmbEqItem.Items.add(string.format("[%d] %s", i - 1, name))
+    end
+    cmbEqItem.ItemIndex = 0
+    return
+  end
+  if not S.ready or not S.gdc then
+    cmbEqItem.Items.add("(Connect first)")
+    cmbEqItem.ItemIndex = 0
+    return
+  end
+  local db = readQword(S.gdc + dbInfo.off)
+  if not db or db == 0 then return end
+  local items = readQword(db + 0x10)
+  local count = readInteger(db + 0x18)
+  for i = 0, count - 1 do
+    local t = readQword(items + 0x20 + i * 8)
+    if t and t ~= 0 then
+      local nameObj = readQword(t + 0x20)
+      if nameObj and nameObj ~= 0 then
+        local nl = readInteger(nameObj + 0x10)
+        if nl and nl > 0 and nl < 50 then
+          local tname = readString(nameObj + 0x14, nl * 2, true)
+          cmbEqItem.Items.add(string.format("[%d] %s", i, tname))
+        end
+      end
+    end
+  end
+  if cmbEqItem.Items.Count > 0 then cmbEqItem.ItemIndex = 0 end
+end
+cmbEqType.OnChange = function() refreshEqItems() end
+_refreshEqItemsFn = refreshEqItems
+
+local btnEq = createButton(frm); btnEq.Left = 410; btnEq.Top = Y - 2; btnEq.Width = 90; btnEq.Height = 24
+btnEq.Caption = "Add Equip"
+btnEq.OnClick = function()
+  if not S.ready then setStatus("Connect first!", 0x0000FF); return end
+  local dbInfo = equipDBs[cmbEqType.ItemIndex + 1]
+  -- Parse real DB index from dropdown text "[35] 软弓" → 35
+  local selText = cmbEqItem.Items[cmbEqItem.ItemIndex]
+  local idx = tonumber(selText and selText:match("^%[(%d+)%]")) or cmbEqItem.ItemIndex
+  local rareLv = cmbEqRare.ItemIndex  -- 0-5 maps directly to rarity
+  setStatus(string.format("Gen %s [%d] rarity=%d", dbInfo.name, idx, rareLv), 0x008080)
+  local ok, msg = addEquipGenerated(dbInfo.genRVA, idx, rareLv, 1.0)
+  if not ok then
+    setStatus("Generator failed: " .. tostring(msg), 0x0000FF)
+  end
+  setStatus(ok and ("Added: " .. msg) or ("ERR: " .. msg), ok and 0x008000 or 0x0000FF)
+end
+Y = Y + 32
+
+lbl = createLabel(frm); lbl.Left = 10; lbl.Top = Y; lbl.Caption = "Treasure"
+lbl.Font.Size = 9; lbl.Font.Style = "fsBold"; Y = Y + 20
+local cmbTrType = createComboBox(frm); cmbTrType.Left = 10; cmbTrType.Top = Y; cmbTrType.Width = 200
+for i, name in ipairs(treasureTypes) do cmbTrType.Items.add(string.format("[%d] %s", i-1, name)) end
+cmbTrType.ItemIndex = 0
+local lblTrR = createLabel(frm); lblTrR.Left = 220; lblTrR.Top = Y + 3; lblTrR.Caption = "Rarity:"
+local cmbTrRare = createComboBox(frm); cmbTrRare.Left = 260; cmbTrRare.Top = Y; cmbTrRare.Width = 90
+cmbTrRare.Items.add("0 White"); cmbTrRare.Items.add("1 Normal"); cmbTrRare.Items.add("2 Good")
+cmbTrRare.Items.add("3 Excellent"); cmbTrRare.Items.add("4 Perfect"); cmbTrRare.Items.add("5 Legendary")
+cmbTrRare.ItemIndex = 5
+local btnTr = createButton(frm); btnTr.Left = 360; btnTr.Top = Y - 2; btnTr.Width = 100; btnTr.Height = 24
+btnTr.Caption = "Add Treasure"
+btnTr.OnClick = function()
+  if not S.ready then setStatus("Connect first!", 0x0000FF); return end
+  local typeIdx = cmbTrType.ItemIndex
+  local rareLv = cmbTrRare.ItemIndex
+  setStatus(string.format("Gen Treasure type=%d rare=%d", typeIdx, rareLv), 0x008080)
+  local ok, msg = addTreasure(typeIdx, rareLv)
+  setStatus(ok and ("Added: " .. msg) or ("ERR: " .. msg), ok and 0x008000 or 0x0000FF)
+end
+Y = Y + 32
+
+lbl = createLabel(frm); lbl.Left = 10; lbl.Top = Y; lbl.Caption = "Medicine (Main Thread)"
+lbl.Font.Size = 9; lbl.Font.Style = "fsBold"; Y = Y + 20
+local cmbMed = createComboBox(frm); cmbMed.Left = 10; cmbMed.Top = Y; cmbMed.Width = 320
+for _, m in ipairs(medDB) do cmbMed.Items.add(string.format("[%d] %s", m[1], m[2])) end; cmbMed.ItemIndex = 0
+local btnMed = createButton(frm); btnMed.Left = 400; btnMed.Top = Y - 2; btnMed.Width = 100; btnMed.Height = 24
+btnMed.Caption = "Add Medicine"
+btnMed.OnClick = function()
+  if not S.ready then setStatus("Connect first!", 0x0000FF); return end
+  setStatus("Adding...", 0x008080)
+  local ok, msg = addMedFood(medDB[cmbMed.ItemIndex + 1][1], 0x110)
+  setStatus(ok and ("Added: " .. msg) or ("ERR: " .. msg), ok and 0x008000 or 0x0000FF)
+end
+Y = Y + 32
+
+lbl = createLabel(frm); lbl.Left = 10; lbl.Top = Y; lbl.Caption = "Food (Main Thread)"
+lbl.Font.Size = 9; lbl.Font.Style = "fsBold"; Y = Y + 20
+local cmbFd = createComboBox(frm); cmbFd.Left = 10; cmbFd.Top = Y; cmbFd.Width = 320
+for _, f in ipairs(foodDB) do cmbFd.Items.add(string.format("[%d] %s", f[1], f[2])) end; cmbFd.ItemIndex = 0
+local btnFd = createButton(frm); btnFd.Left = 400; btnFd.Top = Y - 2; btnFd.Width = 100; btnFd.Height = 24
+btnFd.Caption = "Add Food"
+btnFd.OnClick = function()
+  if not S.ready then setStatus("Connect first!", 0x0000FF); return end
+  setStatus("Adding...", 0x008080)
+  local ok, msg = addMedFood(foodDB[cmbFd.ItemIndex + 1][1], 0x118)
+  setStatus(ok and ("Added: " .. msg) or ("ERR: " .. msg), ok and 0x008000 or 0x0000FF)
+end
+
+frm.Show()
+{$asm}
+
+[DISABLE]
+{$lua}
+if syntaxcheck then return end
+
+-- 1. Close debug log + GUI
+if _logFile then pcall(function() _logFile:close() end); _logFile = nil end
+if _itemAdderForm then _itemAdderForm.destroy(); _itemAdderForm = nil end
+
+-- 2. Disarm command gate + clear pending commands before unhook
+local ok_cb, cmdBufAddr = pcall(getAddress, "cmdBuf")
+if ok_cb and cmdBufAddr and cmdBufAddr ~= 0 then
+  writeInteger(cmdBufAddr + 0x38, 0)  -- disable command processing
+  writeInteger(cmdBufAddr, 0)          -- clear any pending command
+  writeInteger(cmdBufAddr + 0x04, 0)   -- clear status
+end
+
+-- 3. Unhook GameController.Update
+if _ia_harmonyPtrSlot and _ia_origChainTarget then
+  -- Restore Harmony's original pointer
+  writeQword(_ia_harmonyPtrSlot, _ia_origChainTarget)
+  print("[ItemAdder] Restored Harmony trampoline pointer")
+  _ia_harmonyPtrSlot = nil
+  _ia_origChainTarget = nil
+  sleep(100)
+elseif _ia_directPatch and _ia_directPatchAddr and _ia_directPatchOrigBytes then
+  -- Restore original code bytes (no-Harmony direct patch)
+  local n = _ia_patchLen or #_ia_directPatchOrigBytes
+  for i = 1, n do writeBytes(_ia_directPatchAddr + i - 1, _ia_directPatchOrigBytes[i]) end
+  print("[ItemAdder] Restored original Update code bytes")
+  _ia_directPatch = nil; _ia_patchLen = nil
+  _ia_directPatchAddr = nil
+  _ia_directPatchOrigBytes = nil
+  if _ia_relayCode then deAlloc(_ia_relayCode); _ia_relayCode = nil end
+  sleep(100)
+end
+
+-- 3. Dealloc + unregister symbols (pcall-guarded)
+local function tryDealloc(name)
+  local ok, addr = pcall(getAddress, name)
+  if not ok or not addr or addr == 0 then return end
+  pcall(autoAssemble, string.format("unregistersymbol(%s)", name))
+  pcall(autoAssemble, string.format("dealloc(%s)", name))
+end
+tryDealloc("wkCode")
+tryDealloc("wkData")
+tryDealloc("wkStr")
+tryDealloc("cmdBuf")
+tryDealloc("hookCode")
+tryDealloc("origUpdatePtr")
+
+-- 4. Reset state
+_ia_hookInstalled = nil
+{$asm}
+]]></AssemblerScript>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+  </CheatEntries>
+  <LuaScript><![CDATA[
+-- ============================================================
+-- Shared IL2CPP Init (replaces LaunchMonoDataCollector)
+-- Called once per session, results cached globally.
+-- ============================================================
+function _il2cpp_init()
+  if _il2cppCache then return _il2cppCache end
+
+  local pid = getOpenedProcessID()
+  if not pid or pid == 0 then error("Game not running") end
+
+  -- Minimal il2cpp calls using snapshot offsets (f7.8)
+  -- Static field offsets from snapshot — hardcoded to avoid field enumeration
+  local OFFSETS = {
+    gc_inst = 0x0,      -- GameController._instance in static data
+    gdc_inst = 0x20,    -- GameDataController._instance in static data
+    gdc_tagBase = 0x198, -- heroTagDataBase (instance field)
+    gd_skill = 0x130,   -- GlobalData.MaxSkillNum in static data
+    bc_inst = 0x50,     -- BattleController._instance in static data
+  }
+
+  -- Step 1: Get Assembly-CSharp image (3 calls: domain, assemblies, image)
+  local domain = executeCodeEx(0, nil, getAddress("GameAssembly.il2cpp_domain_get"))
+  if not domain or domain == 0 then error("il2cpp_domain_get failed - is game loaded?") end
+  local sizePtr = allocateMemory(8); writeQword(sizePtr, 0)
+  local arr = executeCodeEx(0, nil, getAddress("GameAssembly.il2cpp_domain_get_assemblies"), domain, sizePtr)
+  local count = readInteger(sizePtr); deAlloc(sizePtr)
+  -- Assembly-CSharp is always last
+  local asmPtr = readQword(arr + (count - 1) * 8)
+  local img = executeCodeEx(0, nil, getAddress("GameAssembly.il2cpp_assembly_get_image"), asmPtr)
+
+  -- Step 2: Find classes (1 call each, reuse allocated strings)
+  local cfn = getAddress("GameAssembly.il2cpp_class_from_name")
+  local ns = allocateMemory(16); writeString(ns, "")
+  local cn = allocateMemory(64)
+  local function findClass(name)
+    writeString(cn, name)
+    local k = executeCodeEx(0, nil, cfn, img, ns, cn)
+    return k ~= 0 and k or nil
+  end
+
+  -- Only GameController is required. Others are resolved lazily (IL2CPP race condition).
+  local gc = findClass("GameController")
+  if not gc then error("GameController not found - is game loaded?") end
+  local gdc = findClass("GameDataController")
+  local gd  = findClass("GlobalData")
+  local hd  = findClass("HeroData")
+  local bc  = findClass("BattleController")
+  deAlloc(ns); deAlloc(cn)
+
+  local function klassData(k, instOff)
+    if not k then return nil end
+    return {klass=k, static=readQword(k+0xB8), instOff=instOff}
+  end
+
+  _il2cppCache = {
+    img = img, _cfn = cfn,
+    gc  = klassData(gc, OFFSETS.gc_inst),
+    gdc = gdc and {klass=gdc, static=readQword(gdc+0xB8), instOff=OFFSETS.gdc_inst, tagBaseOff=OFFSETS.gdc_tagBase} or nil,
+    gd  = gd and {klass=gd, static=readQword(gd+0xB8), skillOff=OFFSETS.gd_skill} or nil,
+    hd  = hd and {klass=hd} or nil,
+    bc  = bc and {klass=bc, static=readQword(bc+0xB8), instOff=OFFSETS.bc_inst} or nil,
+  }
+
+  -- Lazy resolver for classes not yet initialized
+  _il2cppCache.findClass = function(name)
+    local ns2 = allocateMemory(16); writeString(ns2, "")
+    local cn2 = allocateMemory(64); writeString(cn2, name)
+    local k = executeCodeEx(0, nil, _il2cppCache._cfn, _il2cppCache.img, ns2, cn2)
+    deAlloc(ns2); deAlloc(cn2)
+    return k ~= 0 and k or nil
+  end
+
+  -- Try to resolve missing classes on next access
+  _il2cppCache.ensure = function(self, field, className, instOff)
+    if self[field] then return self[field] end
+    local k = self.findClass(className)
+    if k then
+      if instOff then
+        self[field] = {klass=k, static=readQword(k+0xB8), instOff=instOff}
+      else
+        self[field] = {klass=k}
+      end
+    end
+    return self[field]
+  end
+
+  local found = 0
+  for _, k in ipairs({gc, gdc, gd, hd, bc}) do if k then found = found + 1 end end
+  print(string.format("[il2cpp] Init OK (%d/5 classes found)", found))
+  return _il2cppCache
+end
+
+function _isGameRunning()
+  local pid = getOpenedProcessID()
+  return pid and pid ~= 0
+end
+
+function _getHero()
+  if not _isGameRunning() then return nil, "Game not running" end
+  local c = _il2cpp_init()
+  local inst = readQword(c.gc.static + c.gc.instOff)
+  if not inst or inst == 0 then
+    _il2cppCache = nil
+    c = _il2cpp_init()
+    inst = readQword(c.gc.static + c.gc.instOff)
+    if not inst or inst == 0 then return nil, "GameController._instance null (load a save first)" end
+  end
+  local wd = readQword(inst + 0x20); if not wd or wd == 0 then return nil, "WorldData null" end
+  local hl = readQword(wd + 0x50);  if not hl or hl == 0 then return nil, "HerosList null" end
+  local ip = readQword(hl + 0x10);  if not ip or ip == 0 then return nil, "HerosList items null" end
+  local h = readQword(ip + 0x20);   if not h or h == 0 then return nil, "Hero not found" end
+  return h, inst
+end
+
+function _getWorldData()
+  if not _isGameRunning() then return nil, "Game not running" end
+  local c = _il2cpp_init()
+  local inst = readQword(c.gc.static + c.gc.instOff)
+  if not inst or inst == 0 then
+    _il2cppCache = nil
+    c = _il2cpp_init()
+    inst = readQword(c.gc.static + c.gc.instOff)
+    if not inst or inst == 0 then return nil, "GameController._instance null" end
+  end
+  local wd = readQword(inst + 0x20); if not wd or wd == 0 then return nil, "WorldData null" end
+  return wd
+end
+
+function _findMethodAddr(klass, methodName, paramCount)
+  -- Single il2cpp call instead of iterating all methods
+  local gmfn = getAddress("GameAssembly.il2cpp_class_get_method_from_name")
+  local nm = allocateMemory(64); writeString(nm, methodName)
+  local mi = executeCodeEx(0, nil, gmfn, klass, nm, paramCount or 0)
+  deAlloc(nm)
+  if not mi or mi == 0 then return nil end
+  return readQword(mi) -- methodPointer at offset 0
+end
+
+function _il2cpp_reset()
+  _il2cppCache = nil
+  print("[il2cpp] Cache cleared - will re-init on next cheat activation")
+end
+  ]]></LuaScript>
+</CheatTable>

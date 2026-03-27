@@ -1,6 +1,7 @@
 # Incident Report: Equipment Generator (cmd=4) Crash/Timeout
 
 ## Date: 2026-03-27
+## Status: RESOLVED
 
 ## Summary
 hookCode cmd=4 (doGenEquip) consistently fails — either crashes the game or times out.
