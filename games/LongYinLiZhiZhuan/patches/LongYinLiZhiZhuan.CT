@@ -1672,10 +1672,9 @@ local function installMainThreadHook()
 
   _ia_getItemPtr = getItemPtr
 
-  -- Use hex address instead of module name to avoid stale symbol resolution
   local aa = string.format([[
 alloc(cmdBuf, 256)
-alloc(hookCode, 2048, ]] .. string.format("%X", base) .. [[)
+alloc(hookCode, 2048, GameAssembly.dll)
 alloc(origUpdatePtr, 8)
 registersymbol(cmdBuf)
 registersymbol(hookCode)
