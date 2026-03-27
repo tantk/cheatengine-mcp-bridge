@@ -2510,10 +2510,27 @@ local btnConn = createButton(frm)
 btnConn.Left = 10; btnConn.Top = Y; btnConn.Width = 130; btnConn.Height = 28
 btnConn.Caption = "Connect to Game"
 btnConn.OnClick = function()
-  setStatus("Connecting...", 0x008080)
-  local ok, msg = discover()
-  setStatus(ok and msg or ("ERR: " .. msg), ok and 0x008000 or 0x0000FF)
-  if ok then pcall(function() _refreshEqItemsFn() end) end
+  -- Check game is attached first to avoid scary CE allocation errors
+  local pid = getOpenedProcessID()
+  if not pid or pid == 0 then
+    setStatus("请先用CE连接游戏进程 [Attach to game first]", 0x0000FF)
+    return
+  end
+  local ga = getAddress("GameAssembly.dll")
+  if not ga or ga == 0 then
+    setStatus("未找到GameAssembly.dll - 请加载存档 [Load a save first]", 0x0000FF)
+    return
+  end
+  setStatus("连接中... [Connecting...]", 0x008080)
+  local pcallOk, discoverOk, discoverMsg = pcall(discover)
+  if not pcallOk then
+    setStatus("ERR: " .. tostring(discoverOk), 0x0000FF)
+  elseif discoverOk then
+    setStatus(discoverMsg, 0x008000)
+    pcall(function() _refreshEqItemsFn() end)
+  else
+    setStatus("ERR: " .. tostring(discoverMsg), 0x0000FF)
+  end
 end
 Y = Y + 38
 
