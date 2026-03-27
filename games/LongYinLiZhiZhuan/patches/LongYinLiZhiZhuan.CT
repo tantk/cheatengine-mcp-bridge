@@ -1365,16 +1365,16 @@ local matDB = {
 -- RVAs (from Il2CppDumper)
 -- ============================================================
 local RVA = {
-  ctor       = 0xCDE970,
-  setBook    = 0xCDDD10,
-  setMat     = 0xCDDE20,
-  clone      = 0xCDB3B0,
-  ildCtor    = 0xCE6310,
-  mergeList  = 0xCE5880,
-  genMedById   = 0x79DD10,
-  genFoodById  = 0x796F20,
-  genHorseById = 0x79D2E0,
-  getItem    = 0x892A30,
+  ctor       = 0xA0DA70,
+  setBook    = 0xA0CE10,
+  setMat     = 0xA0CF20,
+  clone      = 0xA0A490,
+  ildCtor    = 0xA15550,
+  mergeList  = 0xA14AC0,
+  genMedById   = 0x52EA60,
+  genFoodById  = 0x527CB0,
+  genHorseById = 0x52E090,
+  getItem    = 0x624040,
 }
 
 local AOB_SIGS = {
@@ -2314,28 +2314,27 @@ end
 -- ============================================================
 -- Generator RVAs from snapshot (f7.8):
 local EQUIP_GEN_RVA = {
-  Weapon4  = 0x7A73C0,  -- GenerateWeapon(int idx, int bossLv, float rate)
-  Weapon5  = 0x7A7C70,  -- GenerateWeapon(int idx, int bossLv, int weaponType, float rate, ??)
-  Armor    = 0x795B70,  -- GenerateArmor(int idx, int bossLv, float rate)
-  Helmet   = 0x79A490,  -- GenerateHelmet(int idx, int bossLv, float rate)
-  Shoes    = 0x7A5480,  -- GenerateShoes(int idx, int bossLv, float rate)
+  Weapon4  = 0x5367B0,
+  Armor    = 0x524F60,
+  Helmet   = 0x529880,
+  Shoes    = 0x534870,
 }
 
 -- DB offsets on GDC: weapon=0xF0, armor=0xF8, helmet=0x100, shoes=0x108
 local equipDBs = {
-  {name="Weapon",     off=0xF0,  genRVA=0x7A73C0},
-  {name="Armor",      off=0xF8,  genRVA=0x795B70},
-  {name="Helmet",     off=0x100, genRVA=0x79A490},
-  {name="Shoes",      off=0x108, genRVA=0x7A5480},
-  {name="Accessory",  off=nil,   genRVA=0x797A70,
+  {name="Weapon",     off=0xF0,  genRVA=0x5367B0},
+  {name="Armor",      off=0xF8,  genRVA=0x524F60},
+  {name="Helmet",     off=0x100, genRVA=0x529880},
+  {name="Shoes",      off=0x108, genRVA=0x534870},
+  {name="Accessory",  off=nil,   genRVA=0x526E60,
    staticItems={"香囊 Sachet","羽扇 Fan","扳指 Ring","玉佩 Pendant","腰带 Belt","面具 Mask"}},
-  {name="HorseArmor", off=nil,  genRVA=0x79E450,
+  {name="HorseArmor", off=nil,  genRVA=0x52D840,
    staticItems={"鞍具 Saddle"}},
 }
 
 -- Treasure types (separate from equipment)
--- GenerateTreasure(3) RVA=0x7A7310: edx=rareLv, r8d=treasureType, xmm3=float
-local TREASURE_GEN_RVA = 0x7A7310
+-- GenerateTreasure(3): edx=typeIdx, r8d=rareLv, xmm3=float
+local TREASURE_GEN_RVA = 0x536700
 local treasureTypes = {
   "乐器 Instrument","棋谱 Chess Manual","字帖 Calligraphy","画本 Painting","香炉 Incense Burner",
   "服饰 Clothing","珠玉 Jewel","酒器 Wine Vessel","史书 History Book","典籍 Classic Text",
