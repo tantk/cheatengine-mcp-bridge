@@ -2200,9 +2200,43 @@ local equipDBs = {
    staticItems={"香囊 Sachet","羽扇 Fan","扳指 Ring","玉佩 Pendant","腰带 Belt","面具 Mask"}},
   {name="HorseArmor", off=nil,  genRVA=0x79E450,
    staticItems={"鞍具 Saddle"}},
-  {name="Treasure",   off=nil,  genRVA=0x7A7250,
-   staticItems={"Random Treasure"}},
 }
+
+-- Treasure types (separate from equipment)
+-- GenerateTreasure(3) RVA=0x7A7310: edx=rareLv, r8d=treasureType, xmm3=float
+local TREASURE_GEN_RVA = 0x7A7310
+local treasureTypes = {
+  "乐器 Instrument","棋谱 Chess Manual","字帖 Calligraphy","画本 Painting","香炉 Incense Burner",
+  "服饰 Clothing","珠玉 Jewel","酒器 Wine Vessel","史书 History Book","典籍 Classic Text",
+}
+
+local function addTreasure(typeIdx, rareLv, timeout)
+  if not S.ready or not S.cmdBuf then return false, "Connect first" end
+  timeout = timeout or 3000
+  writeInteger(S.cmdBuf + 0x10, rareLv)
+  writeInteger(S.cmdBuf + 0x14, typeIdx)
+  writeFloat(S.cmdBuf + 0x18, 1.0)
+  writeQword(S.cmdBuf + 0x68, S.base + TREASURE_GEN_RVA)
+  writeInteger(S.cmdBuf + 0x04, 0)
+  writeInteger(S.cmdBuf, 4)
+  local elapsed = 0
+  while elapsed < timeout do
+    local status = readInteger(S.cmdBuf + 0x04)
+    if status == 1 then
+      local newItem = readQword(S.cmdBuf + 0x08)
+      if not newItem or newItem == 0 then return false, "Generator returned null" end
+      local itemName = getItemName(newItem)
+      local ok2, _ = mainThreadGetItem(newItem)
+      if not ok2 then return false, "GetItem failed" end
+      return true, itemName
+    elseif status == 2 then
+      return false, "Generator failed"
+    end
+    sleep(16)
+    elapsed = elapsed + 16
+  end
+  return false, "Timeout"
+end
 
 -- Call game's Generate[Equip] on main thread via cmdBuf cmd=4.
 -- hookCode reads: cmdBuf+0x10=dbIndex, +0x14=bossLv, +0x18=qualityRate(float), +0x68=genFuncAddr
@@ -2345,7 +2379,7 @@ end
 local frm = createForm(false)
 _itemAdderForm = frm
 frm.Caption = "LongYinLiZhiZhuan Item Adder v4 (Full Main Thread)"
-frm.Width = 520; frm.Height = 530
+frm.Width = 520; frm.Height = 580
 frm.Position = "poScreenCenter"; frm.BorderStyle = "bsSingle"
 
 local Y = 10
@@ -2478,6 +2512,28 @@ btnEq.OnClick = function()
   if not ok then
     setStatus("Generator failed: " .. tostring(msg), 0x0000FF)
   end
+  setStatus(ok and ("Added: " .. msg) or ("ERR: " .. msg), ok and 0x008000 or 0x0000FF)
+end
+Y = Y + 32
+
+lbl = createLabel(frm); lbl.Left = 10; lbl.Top = Y; lbl.Caption = "Treasure"
+lbl.Font.Size = 9; lbl.Font.Style = "fsBold"; Y = Y + 20
+local cmbTrType = createComboBox(frm); cmbTrType.Left = 10; cmbTrType.Top = Y; cmbTrType.Width = 200
+for i, name in ipairs(treasureTypes) do cmbTrType.Items.add(string.format("[%d] %s", i-1, name)) end
+cmbTrType.ItemIndex = 0
+local lblTrR = createLabel(frm); lblTrR.Left = 220; lblTrR.Top = Y + 3; lblTrR.Caption = "Rarity:"
+local cmbTrRare = createComboBox(frm); cmbTrRare.Left = 260; cmbTrRare.Top = Y; cmbTrRare.Width = 90
+cmbTrRare.Items.add("0 White"); cmbTrRare.Items.add("1 Normal"); cmbTrRare.Items.add("2 Good")
+cmbTrRare.Items.add("3 Excellent"); cmbTrRare.Items.add("4 Perfect"); cmbTrRare.Items.add("5 Legendary")
+cmbTrRare.ItemIndex = 5
+local btnTr = createButton(frm); btnTr.Left = 360; btnTr.Top = Y - 2; btnTr.Width = 100; btnTr.Height = 24
+btnTr.Caption = "Add Treasure"
+btnTr.OnClick = function()
+  if not S.ready then setStatus("Connect first!", 0x0000FF); return end
+  local typeIdx = cmbTrType.ItemIndex
+  local rareLv = cmbTrRare.ItemIndex
+  setStatus(string.format("Gen Treasure type=%d rare=%d", typeIdx, rareLv), 0x008080)
+  local ok, msg = addTreasure(typeIdx, rareLv)
   setStatus(ok and ("Added: " .. msg) or ("ERR: " .. msg), ok and 0x008000 or 0x0000FF)
 end
 Y = Y + 32
