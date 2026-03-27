@@ -1049,7 +1049,7 @@ print("[Building] (toggle again to complete new constructions)")
           <CheatEntries>
             <CheatEntry>
               <ID>1420</ID>
-              <Description>"Fast World Map Travel (player only, 5x speed)"</Description>
+              <Description>"Boost Horse Speed (world map travel)"</Description>
               <Color>000000</Color>
               <VariableType>Auto Assembler Script</VariableType>
               <AssemblerScript><![CDATA[[ENABLE]
@@ -1057,7 +1057,7 @@ print("[Building] (toggle again to complete new constructions)")
 if syntaxcheck then return end
 local hero = _getHero()
 if not hero then error("Hero not found") end
-local input = InputQuery("Travel Speed", "Enter speed multiplier (2-500, default 5):", "5")
+local input = InputQuery("Boost Horse Speed", "Enter speed multiplier (2-500, default 100):", "100")
 if not input then print("[Travel] Cancelled"); return end
 local multi = tonumber(input) or 5
 if multi > 500 then multi = 500 end
