@@ -1364,18 +1364,8 @@ local matDB = {
 -- ============================================================
 -- RVAs (from Il2CppDumper)
 -- ============================================================
-local RVA = {
-  ctor       = 0xA0DA70,
-  setBook    = 0xA0CE10,
-  setMat     = 0xA0CF20,
-  clone      = 0xA0A490,
-  ildCtor    = 0xA15550,
-  mergeList  = 0xA14AC0,
-  genMedById   = 0x52EA60,
-  genFoodById  = 0x527CB0,
-  genHorseById = 0x52E090,
-  getItem    = 0x624040,
-}
+-- RVAs resolved at runtime during discover() — no hardcoded values needed
+local RVA = {}
 
 local AOB_SIGS = {
   setBook   = {sig="48 8B 43 68 48 85 C0 0F 84 ?? ?? ?? ?? 89 78 10", off=0x3F},
@@ -2037,6 +2027,53 @@ local function discover()
   end
   if not S.itemKlass then return false, "No items in inventory" end
 
+  -- Resolve ALL method RVAs at runtime (version-independent, no hardcoding)
+  local gmfn = getAddress("GameAssembly.il2cpp_class_get_method_from_name")
+  local function resolveRVA(klass, name, params)
+    local nm = allocateMemory(64); writeString(nm, name)
+    local mi = executeCodeEx(0, nil, gmfn, klass, nm, params)
+    deAlloc(nm)
+    if not mi or mi == 0 then return nil end
+    local addr = readQword(mi)
+    return addr and addr ~= 0 and (addr - S.base) or nil
+  end
+
+  local heroClass = c:ensure("hd", "HeroData") and c.hd.klass
+  local itemClass = findClass("ItemData")
+  local ildClass = findClass("ItemListData")
+
+  if heroClass then
+    RVA.getItem = resolveRVA(heroClass, "GetItem", 5)
+  end
+  if itemClass then
+    RVA.ctor = resolveRVA(itemClass, ".ctor", 1)
+    RVA.setBook = resolveRVA(itemClass, "SetBookData", 2)
+    RVA.setMat = resolveRVA(itemClass, "SetMaterialData", 3)
+    RVA.clone = resolveRVA(itemClass, "Clone", 0)
+  end
+  if ildClass then
+    RVA.ildCtor = resolveRVA(ildClass, ".ctor", 0)
+    RVA.mergeList = resolveRVA(ildClass, "MergeList", 1)
+  end
+  if gcClass then
+    RVA.genMedById = resolveRVA(gcClass, "GenerateMedData", 3)
+    RVA.genFoodById = resolveRVA(gcClass, "GenerateFoodData", 4)
+    RVA.genHorseById = resolveRVA(gcClass, "GenerateHorseData", 3)
+  end
+  S.setBookAddr = S.base + (RVA.setBook or 0)
+
+  -- Resolve equipment generator RVAs
+  if gcClass then
+    for _, db in ipairs(equipDBs) do
+      db.genRVA = resolveRVA(gcClass, db.genMethod, db.genParams)
+    end
+    TREASURE_GEN_RVA = resolveRVA(gcClass, "GenerateTreasure", 3)
+  end
+
+  local gaSize = getModuleSize("GameAssembly.dll")
+  log(string.format("RVAs auto-resolved (GA size=%d): getItem=%s genWeapon=%s genTreasure=%s",
+    gaSize or 0, tostring(RVA.getItem), tostring(equipDBs[1].genRVA), tostring(TREASURE_GEN_RVA)))
+
   -- Install main-thread hook
   local hookOk, hookErr = installMainThreadHook()
   if not hookOk then return false, "Hook: " .. (hookErr or "unknown") end
@@ -2324,29 +2361,19 @@ end
 -- ============================================================
 -- EQUIPMENT / TREASURE GENERATOR
 -- ============================================================
--- Generator RVAs from snapshot (f7.8):
-local EQUIP_GEN_RVA = {
-  Weapon4  = 0x5367B0,
-  Armor    = 0x524F60,
-  Helmet   = 0x529880,
-  Shoes    = 0x534870,
-}
-
--- DB offsets on GDC: weapon=0xF0, armor=0xF8, helmet=0x100, shoes=0x108
+-- genRVA resolved at runtime in discover() via _resolveEquipRVAs()
 local equipDBs = {
-  {name="Weapon",     off=0xF0,  genRVA=0x5367B0},
-  {name="Armor",      off=0xF8,  genRVA=0x524F60},
-  {name="Helmet",     off=0x100, genRVA=0x529880},
-  {name="Shoes",      off=0x108, genRVA=0x534870},
-  {name="Accessory",  off=nil,   genRVA=0x526E60,
+  {name="Weapon",     off=0xF0,  genMethod="GenerateWeapon", genParams=4},
+  {name="Armor",      off=0xF8,  genMethod="GenerateArmor", genParams=4},
+  {name="Helmet",     off=0x100, genMethod="GenerateHelmet", genParams=4},
+  {name="Shoes",      off=0x108, genMethod="GenerateShoes", genParams=4},
+  {name="Accessory",  off=nil,   genMethod="GenerateDecoration", genParams=4,
    staticItems={"香囊 Sachet","羽扇 Fan","扳指 Ring","玉佩 Pendant","腰带 Belt","面具 Mask"}},
-  {name="HorseArmor", off=nil,  genRVA=0x52D840,
+  {name="HorseArmor", off=nil,  genMethod="GenerateHorseArmorData", genParams=2,
    staticItems={"鞍具 Saddle"}},
 }
 
--- Treasure types (separate from equipment)
--- GenerateTreasure(3): edx=typeIdx, r8d=rareLv, xmm3=float
-local TREASURE_GEN_RVA = 0x536700
+local TREASURE_GEN_RVA = nil  -- resolved at runtime
 local treasureTypes = {
   "乐器 Instrument","棋谱 Chess Manual","字帖 Calligraphy","画本 Painting","香炉 Incense Burner",
   "服饰 Clothing","珠玉 Jewel","酒器 Wine Vessel","史书 History Book","典籍 Classic Text",
@@ -2811,8 +2838,7 @@ _ia_hookInstalled = nil
 -- Shared IL2CPP Init (replaces LaunchMonoDataCollector)
 -- Called once per session, results cached globally.
 -- ============================================================
--- Known game version: update these when game updates and RVAs are re-resolved
-local KNOWN_GA_SIZE = 36167680  -- GameAssembly.dll size for version f8
+-- All method RVAs are resolved at runtime — no version-specific constants needed
 
 function _il2cpp_init()
   if _il2cppCache then return _il2cppCache end
@@ -2827,12 +2853,6 @@ function _il2cpp_init()
   if not testRead then
     _il2cppCache = nil
     error("游戏已关闭 [Game closed]")
-  end
-
-  -- Version check: detect if game updated since RVAs were last resolved
-  local gaSize = getModuleSize("GameAssembly.dll")
-  if gaSize and gaSize ~= KNOWN_GA_SIZE then
-    error(string.format("游戏版本不匹配! GA大小: %d (预期: %d) — 需要更新RVA [Game version mismatch]", gaSize, KNOWN_GA_SIZE))
   end
 
   -- Validate ALL il2cpp exports upfront to prevent nearby allocation popup
