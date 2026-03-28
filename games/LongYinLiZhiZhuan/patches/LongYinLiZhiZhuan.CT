@@ -1065,7 +1065,7 @@ print("[Building] (toggle again to complete new constructions)")
           <CheatEntries>
             <CheatEntry>
               <ID>1420</ID>
-              <Description>"马匹加速 [Horse Speed]"</Description>
+              <Description>"马匹加速 (存档前请关闭!) [Horse Speed - disable before save!]"</Description>
               <Color>000000</Color>
               <VariableType>Auto Assembler Script</VariableType>
               <AssemblerScript><![CDATA[[ENABLE]
