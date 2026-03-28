@@ -198,9 +198,12 @@ for offset = 0, 511 do
     if ok then
       local pAddr = targetAddr + offset + 1
       local orig = readBytes(pAddr, 1)
-      table.insert(_talentCapPatches, {addr=pAddr, orig=orig})
-      writeBytes(pAddr, newCap)
-      print(string.format("[TalentCap] Patched mov eax,0x%02X -> 0x%02X at +%d", orig, newCap, offset))
+      -- Only patch real talent values (9 or 10), skip false positives
+      if orig == 0x09 or orig == 0x0A then
+        table.insert(_talentCapPatches, {addr=pAddr, orig=orig})
+        writeBytes(pAddr, newCap)
+        print(string.format("[TalentCap] Patched mov eax,0x%02X -> 0x%02X at +%d", orig, newCap, offset))
+      end
     end
   end
   -- Pattern C: 83 C0 XX 48 83 C4 20 5B C3  (add eax, imm8; epilogue)
@@ -214,9 +217,11 @@ for offset = 0, 511 do
     if ok then
       local pAddr = targetAddr + offset + 2
       local orig = readBytes(pAddr, 1)
-      table.insert(_talentCapPatches, {addr=pAddr, orig=orig})
-      writeBytes(pAddr, newCap)
-      print(string.format("[TalentCap] Patched add eax,0x%02X -> 0x%02X at +%d", orig, newCap, offset))
+      if orig == 0x09 or orig == 0x0A then
+        table.insert(_talentCapPatches, {addr=pAddr, orig=orig})
+        writeBytes(pAddr, newCap)
+        print(string.format("[TalentCap] Patched add eax,0x%02X -> 0x%02X at +%d", orig, newCap, offset))
+      end
     end
   end
 end
@@ -386,9 +391,11 @@ if input2 then
             if ok then
               local pAddr = targetAddr + offset + 1
               local orig = readBytes(pAddr, 1)
-              table.insert(_sectTalentCapPatches, {addr=pAddr, orig=orig})
-              writeBytes(pAddr, capByte)
-              print(string.format("[SectTalent] Patched mov eax,0x%02X -> 0x%02X at +%d", orig, capByte, offset))
+              if orig == 0x09 or orig == 0x0A then
+                table.insert(_sectTalentCapPatches, {addr=pAddr, orig=orig})
+                writeBytes(pAddr, capByte)
+                print(string.format("[SectTalent] Patched mov eax,0x%02X -> 0x%02X at +%d", orig, capByte, offset))
+              end
             end
           end
           -- Pattern B: 83 C0 XX 48 83 C4 20 5B C3
@@ -402,9 +409,11 @@ if input2 then
             if ok then
               local pAddr = targetAddr + offset + 2
               local orig = readBytes(pAddr, 1)
-              table.insert(_sectTalentCapPatches, {addr=pAddr, orig=orig})
-              writeBytes(pAddr, capByte)
-              print(string.format("[SectTalent] Patched add eax,0x%02X -> 0x%02X at +%d", orig, capByte, offset))
+              if orig == 0x09 or orig == 0x0A then
+                table.insert(_sectTalentCapPatches, {addr=pAddr, orig=orig})
+                writeBytes(pAddr, capByte)
+                print(string.format("[SectTalent] Patched add eax,0x%02X -> 0x%02X at +%d", orig, capByte, offset))
+              end
             end
           end
         end
