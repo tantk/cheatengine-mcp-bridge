@@ -1023,18 +1023,9 @@ for i = 0, areaCount - 1 do
               local bt = readInteger(bldg + 0x18) or 0
               local ut = readInteger(bldg + 0x1C) or 0
               local dt = readInteger(bldg + 0x20) or 0
-              local lv = readInteger(bldg + 0x14) or 0
-              if bt > 0 then
-                writeInteger(bldg + 0x14, lv + 1)
-                writeInteger(bldg + 0x18, 0)
-                completed = completed + 1
-              end
-              if ut > 0 then
-                writeInteger(bldg + 0x14, lv + 1)
-                writeInteger(bldg + 0x1C, 0)
-                completed = completed + 1
-              end
-              if dt > 0 then writeInteger(bldg + 0x20, 1); completed = completed + 1 end
+              if bt > 1 then writeInteger(bldg + 0x18, 1); completed = completed + 1 end
+              if ut > 1 then writeInteger(bldg + 0x1C, 1); completed = completed + 1 end
+              if dt > 1 then writeInteger(bldg + 0x20, 1); completed = completed + 1 end
             end
           end
         end
@@ -1042,7 +1033,7 @@ for i = 0, areaCount - 1 do
     end
     -- Also clear area branch defence upgrade time
     local branchTime = readInteger(area + 0xD8) or 0
-    if branchTime > 0 then writeInteger(area + 0xD8, 0); completed = completed + 1 end
+    if branchTime > 1 then writeInteger(area + 0xD8, 1); completed = completed + 1 end
   end
 end
 print(string.format("[Building] Instantly completed %d pending operations across %d areas", completed, areaCount))
