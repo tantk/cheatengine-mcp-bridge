@@ -1,6 +1,7 @@
 game_dump.txt
 forum_post.txt
 longyin_plus
+games/quest/
 
 # Reference / third-party extracted files (large, not ours)
 **/reference/
