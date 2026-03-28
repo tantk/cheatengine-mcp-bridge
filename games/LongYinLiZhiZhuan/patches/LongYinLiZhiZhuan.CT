@@ -2723,10 +2723,14 @@ lbl.Font.Size = 9; lbl.Font.Style = "fsBold"; Y = Y + 20
 local cmbEqType = createComboBox(frm); cmbEqType.Left = 10; cmbEqType.Top = Y; cmbEqType.Width = 80
 for _, e in ipairs(equipDBs) do cmbEqType.Items.add(e.name) end; cmbEqType.ItemIndex = 0
 local cmbEqItem = createComboBox(frm); cmbEqItem.Left = 100; cmbEqItem.Top = Y; cmbEqItem.Width = 160
-local lblEqLv = createLabel(frm); lblEqLv.Left = 270; lblEqLv.Top = Y + 3; lblEqLv.Caption = "Rarity:"
-local cmbEqRare = createComboBox(frm); cmbEqRare.Left = 310; cmbEqRare.Top = Y; cmbEqRare.Width = 90
-cmbEqRare.Items.add("0 White"); cmbEqRare.Items.add("1 Normal"); cmbEqRare.Items.add("2 Good")
-cmbEqRare.Items.add("3 Excellent"); cmbEqRare.Items.add("4 Perfect"); cmbEqRare.Items.add("5 Legendary")
+local lblEqLv = createLabel(frm); lblEqLv.Left = 270; lblEqLv.Top = Y + 3; lblEqLv.Caption = "Lv:"
+local cmbEqLv = createComboBox(frm); cmbEqLv.Left = 290; cmbEqLv.Top = Y; cmbEqLv.Width = 55
+cmbEqLv.Items.add("0劣质"); cmbEqLv.Items.add("1普通"); cmbEqLv.Items.add("2优质")
+cmbEqLv.Items.add("3精良"); cmbEqLv.Items.add("4完美"); cmbEqLv.Items.add("5绝世")
+cmbEqLv.ItemIndex = 5
+local lblEqR = createLabel(frm); lblEqR.Left = 350; lblEqR.Top = Y + 3; lblEqR.Caption = "Rare:"
+local cmbEqRare = createComboBox(frm); cmbEqRare.Left = 380; cmbEqRare.Top = Y; cmbEqRare.Width = 30
+for i = 0, 5 do cmbEqRare.Items.add(tostring(i)) end
 cmbEqRare.ItemIndex = 5
 
 -- Populate equipment dropdown based on selected type
@@ -2775,10 +2779,11 @@ btnEq.OnClick = function()
   local dbInfo = equipDBs[cmbEqType.ItemIndex + 1]
   local selText = cmbEqItem.Items[cmbEqItem.ItemIndex]
   local idx = tonumber(selText and selText:match("^%[(%d+)%]")) or cmbEqItem.ItemIndex
-  local rareLv = cmbEqRare.ItemIndex
-  log(string.format("BTN AddEquip: type=%s item='%s' idx=%d rare=%d RVA=%X", dbInfo.name, selText or "?", idx, rareLv, dbInfo.genRVA))
-  setStatus(string.format("Gen %s [%d] rarity=%d", dbInfo.name, idx, rareLv), 0x008080)
-  local ok, msg = addEquipGenerated(dbInfo.genRVA, idx, rareLv, 1.0)
+  local itemLv = cmbEqLv.ItemIndex       -- 0-5: controls prefix (劣质→绝世)
+  local rareLv = cmbEqRare.ItemIndex      -- 0-5: controls bonus stats count
+  log(string.format("BTN AddEquip: type=%s item='%s' idx=%d lv=%d rare=%d", dbInfo.name, selText or "?", idx, itemLv, rareLv))
+  setStatus(string.format("Gen %s [%d] lv=%d rare=%d", dbInfo.name, idx, itemLv, rareLv), 0x008080)
+  local ok, msg = addEquipGenerated(dbInfo.genRVA, idx, itemLv, rareLv * 1.0)
   log(string.format("BTN AddEquip result: ok=%s msg=%s", tostring(ok), tostring(msg)))
   setStatus(ok and ("Added: " .. msg) or ("ERR: " .. msg), ok and 0x008000 or 0x0000FF)
 end
