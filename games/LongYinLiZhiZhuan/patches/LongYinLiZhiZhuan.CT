@@ -1046,9 +1046,9 @@ local ecStatic = readQword(ecClass + 0xB8)
 if not ecStatic or ecStatic == 0 then error("请先进入副本 [Enter a dungeon first]") end
 local ecInst = readQword(ecStatic + 0x8)
 if not ecInst or ecInst == 0 then error("请先进入副本 [Enter a dungeon first]") end
--- Validate instance is alive by reading explorePanelData (+0x78)
-local epd = readQword(ecInst + 0x78)
-if not epd or epd == 0 then error("请先进入副本 [Enter a dungeon first - no active dungeon]") end
+-- Validate dungeon is active: inited (+0xD0) must be true
+local inited = readBytes(ecInst + 0xD0, 1)
+if not inited or inited == 0 then error("请先进入副本 [Enter a dungeon first]") end
 local seeAllAddr = _findMethodAddr(ecClass, "SeeAllTile", 0)
 if not seeAllAddr then error("SeeAllTile not found") end
 executeCodeEx(0, nil, seeAllAddr, ecInst)
