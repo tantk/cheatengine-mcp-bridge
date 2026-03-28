@@ -1965,6 +1965,8 @@ end
 local function discover()
   logOpen()
   log("=== discover() start ===")
+  -- Force clear all caches to prevent stale pointer issues
+  _il2cppCache = nil
   S = {}
   S.base = getAddress("GameAssembly.dll")
   log("S.base = " .. toHex(S.base))
