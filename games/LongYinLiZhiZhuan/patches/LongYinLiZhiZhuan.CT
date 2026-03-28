@@ -914,6 +914,49 @@ print("[Resource] (values remain as set)")
 {$asm}
 ]]></AssemblerScript>
             </CheatEntry>
+            <CheatEntry>
+              <ID>1105</ID>
+              <Description>"门派资源无消耗 [No Resource Cost]"</Description>
+              <Color>000000</Color>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript><![CDATA[[ENABLE]
+{$lua}
+if syntaxcheck then return end
+local c = _il2cpp_init()
+local fdClass = c.findClass("ForceData")
+if not fdClass then error("ForceData not found") end
+local gmfn = getAddress("GameAssembly.il2cpp_class_get_method_from_name")
+local nm = allocateMemory(64)
+
+_noCostPatches = {}
+for _, params in ipairs({2, 3}) do
+  writeString(nm, "CostResource")
+  local mi = executeCodeEx(0, nil, gmfn, fdClass, nm, params)
+  if mi and mi ~= 0 then
+    local addr = readQword(mi)
+    local origByte = readBytes(addr, 1)
+    table.insert(_noCostPatches, {addr=addr, orig=origByte})
+    writeBytes(addr, 0xC3)  -- ret immediately
+    print(string.format("[NoCost] Patched CostResource(%d) at %X", params, addr))
+  end
+end
+deAlloc(nm)
+print(string.format("[NoCost] %d methods patched — resources won't be consumed", #_noCostPatches))
+{$asm}
+
+[DISABLE]
+{$lua}
+if syntaxcheck then return end
+if _noCostPatches then
+  for _, p in ipairs(_noCostPatches) do
+    writeBytes(p.addr, p.orig)
+  end
+  print(string.format("[NoCost] Restored %d methods", #_noCostPatches))
+  _noCostPatches = nil
+end
+{$asm}
+]]></AssemblerScript>
+            </CheatEntry>
           </CheatEntries>
         </CheatEntry>
 
