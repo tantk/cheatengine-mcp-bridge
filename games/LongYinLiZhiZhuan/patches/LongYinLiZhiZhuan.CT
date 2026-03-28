@@ -1100,6 +1100,54 @@ print("[Building] (toggle again to complete new constructions)")
         </CheatEntry>
 
         <CheatEntry>
+          <ID>97</ID>
+          <Description>"--- 探索 [Exploration] ---"</Description>
+          <GroupHeader>1</GroupHeader>
+          <Options moHideChildren="1" moAllowManualCollapseAndExpand="1"/>
+          <Color>008000</Color>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>1430</ID>
+              <Description>"移除迷雾 (进入副本前开启) [Remove Fog of War]"</Description>
+              <Color>000000</Color>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript><![CDATA[[ENABLE]
+{$lua}
+if syntaxcheck then return end
+-- Patch GetSeeRange to return 50.0 (enough for most dungeons)
+-- 50.0 as float = 0x42480000
+local c = _il2cpp_init()
+if not c:ensure("hd","HeroData") then error("HeroData not loaded") end
+local addr = _findMethodAddr(c.hd.klass, "GetSeeRange", 0)
+if not addr then error("GetSeeRange not found") end
+_fogOrigBytes = {}
+for i = 0, 9 do _fogOrigBytes[i+1] = readBytes(addr+i, 1) end
+-- mov eax,42480000; movd xmm0,eax; ret
+writeBytes(addr, {0xB8, 0x00, 0x00, 0x48, 0x42, 0x66, 0x0F, 0x6E, 0xC0, 0xC3})
+print(string.format("[Fog] GetSeeRange patched to 50 at %X", addr))
+{$asm}
+
+[DISABLE]
+{$lua}
+if syntaxcheck then return end
+if _fogOrigBytes then
+  local c = _il2cpp_init()
+  if c:ensure("hd","HeroData") then
+    local addr = _findMethodAddr(c.hd.klass, "GetSeeRange", 0)
+    if addr then
+      for i = 1, #_fogOrigBytes do writeBytes(addr+i-1, _fogOrigBytes[i]) end
+    end
+  end
+  print("[Fog] GetSeeRange restored")
+  _fogOrigBytes = nil
+end
+{$asm}
+]]></AssemblerScript>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+
+        <CheatEntry>
           <ID>96</ID>
           <Description>"--- 旅行 [Travel] ---"</Description>
           <Options moHideChildren="1" moAllowManualCollapseAndExpand="1"/>
