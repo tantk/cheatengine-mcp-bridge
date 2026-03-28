@@ -1042,8 +1042,13 @@ if syntaxcheck then return end
 local c = _il2cpp_init()
 local ecClass = c.findClass("ExploreController")
 if not ecClass then error("请先进入副本 [Enter a dungeon first]") end
-local ecInst = readQword(readQword(ecClass + 0xB8) + 0x8)
+local ecStatic = readQword(ecClass + 0xB8)
+if not ecStatic or ecStatic == 0 then error("请先进入副本 [Enter a dungeon first]") end
+local ecInst = readQword(ecStatic + 0x8)
 if not ecInst or ecInst == 0 then error("请先进入副本 [Enter a dungeon first]") end
+-- Validate instance is alive by reading explorePanelData (+0x78)
+local epd = readQword(ecInst + 0x78)
+if not epd or epd == 0 then error("请先进入副本 [Enter a dungeon first - no active dungeon]") end
 local seeAllAddr = _findMethodAddr(ecClass, "SeeAllTile", 0)
 if not seeAllAddr then error("SeeAllTile not found") end
 executeCodeEx(0, nil, seeAllAddr, ecInst)
