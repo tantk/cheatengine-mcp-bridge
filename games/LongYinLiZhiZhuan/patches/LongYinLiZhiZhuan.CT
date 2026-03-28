@@ -171,76 +171,33 @@ print("[SectCurrency] (value remains as set)")
 [ENABLE]
 {$lua}
 if syntaxcheck then return end
+-- Simple approach: patch GetMaxTagNum to always return 99
+-- Replace first bytes with: mov eax,63; ret (B8 63 00 00 00 C3)
+-- Much more resilient to game updates than AOB scanning return paths
 local c = _il2cpp_init()
 if not c:ensure("hd", "HeroData") then error("HeroData not loaded yet - try again") end
 local targetAddr = _findMethodAddr(c.hd.klass, "GetMaxTagNum")
 if not targetAddr or targetAddr == 0 then error("GetMaxTagNum not found") end
 
--- GetMaxTagNum has 3 return paths:
---   Path A: mov eax, 0A  (B8 0A 00 00 00) — when [hero+0x58]!=0 (most common)
---   Path B: mov eax, 09  (B8 09 00 00 00) — when config bool is set
---   Path C: add eax, 09  (83 C0 09)       — base+9 calculated path
--- All end with epilogue: 48 83 C4 20 5B C3  (add rsp,20; pop rbx; ret)
--- We must patch ALL three to take effect.
 _talentCapPatches = {}
-local newCap = 0x63  -- 99
-
-for offset = 0, 511 do
-  local b = readBytes(targetAddr + offset, 1)
-  -- Pattern A/B: B8 XX 00 00 00 48 83 C4 20 5B C3  (mov eax, imm32; epilogue)
-  if b == 0xB8 then
-    local ok = true
-    for ci, cv in ipairs({nil, 0x00, 0x00, 0x00, 0x48, 0x83, 0xC4, 0x20, 0x5B, 0xC3}) do
-      if cv then
-        if readBytes(targetAddr + offset + ci, 1) ~= cv then ok = false; break end
-      end
-    end
-    if ok then
-      local pAddr = targetAddr + offset + 1
-      local orig = readBytes(pAddr, 1)
-      -- Only patch real talent values (9 or 10), skip false positives
-      if orig == 0x09 or orig == 0x0A then
-        table.insert(_talentCapPatches, {addr=pAddr, orig=orig})
-        writeBytes(pAddr, newCap)
-        print(string.format("[TalentCap] Patched mov eax,0x%02X -> 0x%02X at +%d", orig, newCap, offset))
-      end
-    end
-  end
-  -- Pattern C: 83 C0 XX 48 83 C4 20 5B C3  (add eax, imm8; epilogue)
-  if b == 0x83 and readBytes(targetAddr + offset + 1, 1) == 0xC0 then
-    local ok = true
-    for ci, cv in ipairs({nil, nil, nil, 0x48, 0x83, 0xC4, 0x20, 0x5B, 0xC3}) do
-      if cv then
-        if readBytes(targetAddr + offset + ci - 1, 1) ~= cv then ok = false; break end
-      end
-    end
-    if ok then
-      local pAddr = targetAddr + offset + 2
-      local orig = readBytes(pAddr, 1)
-      if orig == 0x09 or orig == 0x0A then
-        table.insert(_talentCapPatches, {addr=pAddr, orig=orig})
-        writeBytes(pAddr, newCap)
-        print(string.format("[TalentCap] Patched add eax,0x%02X -> 0x%02X at +%d", orig, newCap, offset))
-      end
-    end
-  end
-end
-
-if #_talentCapPatches == 0 then
-  error("No patch sites found in GetMaxTagNum!")
-else
-  print(string.format("[TalentCap] Patched %d return paths (all -> max 99)", #_talentCapPatches))
-end
+for i = 0, 5 do _talentCapPatches[i+1] = readBytes(targetAddr + i, 1) end
+-- mov eax, 99; ret
+writeBytes(targetAddr, {0xB8, 0x63, 0x00, 0x00, 0x00, 0xC3})
+print(string.format("[TalentCap] GetMaxTagNum patched to return 99 at %X", targetAddr))
 {$asm}
 
 [DISABLE]
 {$lua}
 if syntaxcheck then return end
 if _talentCapPatches then
-  for _, p in ipairs(_talentCapPatches) do
-    writeBytes(p.addr, p.orig)
+  local c = _il2cpp_init()
+  if c:ensure("hd", "HeroData") then
+    local addr = _findMethodAddr(c.hd.klass, "GetMaxTagNum")
+    if addr then
+      for i = 1, #_talentCapPatches do writeBytes(addr + i - 1, _talentCapPatches[i]) end
+    end
   end
-  print(string.format("[TalentCap] Restored %d patches", #_talentCapPatches))
+  print("[TalentCap] Restored original GetMaxTagNum")
   _talentCapPatches = nil
 end
 {$asm}
@@ -366,64 +323,19 @@ if input2 then
   local newCap = tonumber(input2)
   if newCap and newCap >= 1 and (255 >= newCap) then
     local c2 = _il2cpp_init()
-    local targetAddr = _findMethodAddr(c2.hd.klass, "GetMaxTagNum")
-    if not targetAddr or targetAddr == 0 then
-      print("[SectTalent] ERROR: GetMaxTagNum method not found")
+    if not c2:ensure("hd", "HeroData") then
+      print("[SectTalent] ERROR: HeroData not loaded")
     else
-      if true then
-        print(string.format("[SectTalent] GetMaxTagNum at 0x%X — patching all return paths", targetAddr))
-        -- GetMaxTagNum has 3 return paths, all ending with epilogue 48 83 C4 20 5B C3:
-        --   mov eax, 0A (B8 0A ...) — hero+0x58 != 0 path
-        --   mov eax, 09 (B8 09 ...) — config bool path
-        --   add eax, 09 (83 C0 09) — calculated path
+      local targetAddr = _findMethodAddr(c2.hd.klass, "GetMaxTagNum")
+      if not targetAddr or targetAddr == 0 then
+        print("[SectTalent] ERROR: GetMaxTagNum not found")
+      else
+        -- Simple patch: replace function entry with mov eax,N; ret
         _sectTalentCapPatches = {}
         local capByte = math.floor(newCap)
-        for offset = 0, 511 do
-          local b = readBytes(targetAddr + offset, 1)
-          -- Pattern A: B8 XX 00 00 00 48 83 C4 20 5B C3
-          if b == 0xB8 then
-            local ok = true
-            for ci, cv in ipairs({nil, 0x00, 0x00, 0x00, 0x48, 0x83, 0xC4, 0x20, 0x5B, 0xC3}) do
-              if cv then
-                if readBytes(targetAddr + offset + ci, 1) ~= cv then ok = false; break end
-              end
-            end
-            if ok then
-              local pAddr = targetAddr + offset + 1
-              local orig = readBytes(pAddr, 1)
-              if orig == 0x09 or orig == 0x0A then
-                table.insert(_sectTalentCapPatches, {addr=pAddr, orig=orig})
-                writeBytes(pAddr, capByte)
-                print(string.format("[SectTalent] Patched mov eax,0x%02X -> 0x%02X at +%d", orig, capByte, offset))
-              end
-            end
-          end
-          -- Pattern B: 83 C0 XX 48 83 C4 20 5B C3
-          if b == 0x83 and readBytes(targetAddr + offset + 1, 1) == 0xC0 then
-            local ok = true
-            for ci, cv in ipairs({nil, nil, nil, 0x48, 0x83, 0xC4, 0x20, 0x5B, 0xC3}) do
-              if cv then
-                if readBytes(targetAddr + offset + ci - 1, 1) ~= cv then ok = false; break end
-              end
-            end
-            if ok then
-              local pAddr = targetAddr + offset + 2
-              local orig = readBytes(pAddr, 1)
-              if orig == 0x09 or orig == 0x0A then
-                table.insert(_sectTalentCapPatches, {addr=pAddr, orig=orig})
-                writeBytes(pAddr, capByte)
-                print(string.format("[SectTalent] Patched add eax,0x%02X -> 0x%02X at +%d", orig, capByte, offset))
-              end
-            end
-          end
-        end
-        if #_sectTalentCapPatches == 0 then
-          local dump = {}
-          for i = 0, 31 do dump[#dump+1] = string.format("%02X", readBytes(targetAddr + i, 1) or 0) end
-          print("[SectTalent] No patches found! First 32 bytes: " .. table.concat(dump, " "))
-        else
-          print(string.format("[SectTalent] Patched %d return paths (max slots = %d)", #_sectTalentCapPatches, newCap))
-        end
+        for i = 0, 5 do _sectTalentCapPatches[i+1] = readBytes(targetAddr + i, 1) end
+        writeBytes(targetAddr, {0xB8, capByte, 0x00, 0x00, 0x00, 0xC3})
+        print(string.format("[SectTalent] GetMaxTagNum returns %d at %X", capByte, targetAddr))
       end
     end
   else
@@ -436,10 +348,14 @@ end
 {$lua}
 if syntaxcheck then return end
 if _sectTalentCapPatches then
-  for _, p in ipairs(_sectTalentCapPatches) do
-    writeBytes(p.addr, p.orig)
+  local c2 = _il2cpp_init()
+  if c2:ensure("hd", "HeroData") then
+    local addr = _findMethodAddr(c2.hd.klass, "GetMaxTagNum")
+    if addr then
+      for i = 1, #_sectTalentCapPatches do writeBytes(addr + i - 1, _sectTalentCapPatches[i]) end
+    end
   end
-  print(string.format("[SectTalent] Restored %d slot patches", #_sectTalentCapPatches))
+  print("[SectTalent] Restored original GetMaxTagNum")
   _sectTalentCapPatches = nil
 end
 print("[SectTalent] Disabled (talent points remain as set)")
