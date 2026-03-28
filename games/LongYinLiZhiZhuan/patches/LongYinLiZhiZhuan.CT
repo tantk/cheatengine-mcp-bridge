@@ -1034,7 +1034,7 @@ for i = 0, areaCount - 1 do
                 writeInteger(bldg + 0x1C, 0)
                 completed = completed + 1
               end
-              if dt > 0 then writeInteger(bldg + 0x20, 0); completed = completed + 1 end
+              if dt > 0 then writeInteger(bldg + 0x20, 1); completed = completed + 1 end
             end
           end
         end
