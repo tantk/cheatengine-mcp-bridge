@@ -19,3 +19,5 @@ desktop.ini
 
 # Excel lock files
 ~$*.xlsx
+tools/
+release.sh
