@@ -2876,7 +2876,13 @@ _ia_hookInstalled = nil
 -- All method RVAs are resolved at runtime — no version-specific constants needed
 
 function _il2cpp_init()
-  if _il2cppCache then return _il2cppCache end
+  -- Check if cache is valid: GA base must match (game restart = new base)
+  if _il2cppCache then
+    local curGA = getAddress("GameAssembly.dll")
+    if curGA and curGA == _il2cppCache._gaBase then return _il2cppCache end
+    -- GA base changed = game restarted, clear stale cache
+    _il2cppCache = nil
+  end
 
   local pid = getOpenedProcessID()
   if not pid or pid == 0 then error("请先用CE连接游戏 [Attach CE to game first]") end
@@ -2945,7 +2951,7 @@ function _il2cpp_init()
   end
 
   _il2cppCache = {
-    img = img, _cfn = cfn,
+    _gaBase = gaAddr, img = img, _cfn = cfn,
     gc  = klassData(gc, OFFSETS.gc_inst),
     gdc = gdc and {klass=gdc, static=readQword(gdc+0xB8), instOff=OFFSETS.gdc_inst, tagBaseOff=OFFSETS.gdc_tagBase} or nil,
     gd  = gd and {klass=gd, static=readQword(gd+0xB8), skillOff=OFFSETS.gd_skill} or nil,
