@@ -1035,14 +1035,6 @@ for i = 0, areaCount - 1 do
                 completed = completed + 1
               end
               if dt > 0 then writeInteger(bldg + 0x20, 1); completed = completed + 1 end
-              -- Force-remove obstacles (buildingID = -1/0xFFFFFFFF) even if not started
-              local bid = readInteger(bldg + 0x10) or 0
-              if bid == -1 or bid == 0xFFFFFFFF then
-                if dt == 0 then
-                  writeInteger(bldg + 0x20, 1)  -- start and near-complete destroy
-                  completed = completed + 1
-                end
-              end
             end
           end
         end
