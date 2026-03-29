@@ -2908,6 +2908,204 @@ _ia_hookInstalled = nil
         </CheatEntry>
       </CheatEntries>
     </CheatEntry>
+
+    <CheatEntry>
+      <ID>90</ID>
+      <Description>"--- 角色创建 [Character Creation] ---"</Description>
+      <Options moHideChildren="1" moAllowManualCollapseAndExpand="1"/>
+      <GroupHeader>1</GroupHeader>
+      <Color>800080</Color>
+      <CheatEntries>
+
+        <CheatEntry>
+          <ID>901</ID>
+          <Description>"创建天赋槽位 [Creation Talent Slots]"</Description>
+          <Color>000000</Color>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript><![CDATA[[ENABLE]
+{$lua}
+if syntaxcheck then return end
+
+_checkGameAlive()
+
+local input = InputQuery("Creation Talent Slots", "Enter max talent slots (default 5, max 99):", "10")
+if not input then return end
+local maxSlots = tonumber(input)
+if not maxSlots or maxSlots < 1 or maxSlots > 99 then error("Invalid value (1-99)") end
+
+-- Find Assembly-CSharp image by scanning all assemblies
+local getDomain = getAddress("GameAssembly.il2cpp_domain_get")
+local getAssemblies = getAddress("GameAssembly.il2cpp_domain_get_assemblies")
+local getImage = getAddress("GameAssembly.il2cpp_assembly_get_image")
+local classFromName = getAddress("GameAssembly.il2cpp_class_from_name")
+local gmfn = getAddress("GameAssembly.il2cpp_class_get_method_from_name")
+
+if not getDomain or getDomain == 0 or not getAssemblies or getAssemblies == 0 or
+   not getImage or getImage == 0 or not classFromName or classFromName == 0 or
+   not gmfn or gmfn == 0 then
+  error("请先连接游戏进程 [Attach to game process first]")
+end
+
+local domain = executeCodeEx(0, nil, getDomain)
+if not domain or domain == 0 then error("请先连接游戏进程 [Attach to game process first]") end
+local sizePtr = allocateMemory(8)
+local asmList = executeCodeEx(0, nil, getAssemblies, domain, sizePtr)
+local asmCount = readInteger(sizePtr)
+deAlloc(sizePtr)
+if not asmList or asmList == 0 or not asmCount or asmCount == 0 then
+  error("请先连接游戏进程 [Attach to game process first]")
+end
+
+local klass = nil
+local ns = allocateMemory(16); writeString(ns, "")
+local cn = allocateMemory(64); writeString(cn, "StartMenuController")
+for i = 0, asmCount - 1 do
+  local asm = readQword(asmList + i * 8)
+  if asm and asm ~= 0 then
+    local img = executeCodeEx(0, nil, getImage, asm)
+    if img and img ~= 0 then
+      local k = executeCodeEx(0, nil, classFromName, img, ns, cn)
+      if k and k ~= 0 then klass = k; break end
+    end
+  end
+end
+deAlloc(ns); deAlloc(cn)
+if not klass then error("请先进入角色创建界面 [Enter character creation screen first]") end
+
+-- Use method iterator (get_method_from_name fails for some classes)
+local getMethods = getAddress("GameAssembly.il2cpp_class_get_methods")
+local getMethodName = getAddress("GameAssembly.il2cpp_method_get_name")
+local iter2 = allocateMemory(8); writeQword(iter2, 0)
+local chooseAddr, refreshAddr
+for i = 1, 80 do
+  local mi = executeCodeEx(0, nil, getMethods, klass, iter2)
+  if not mi or mi == 0 then break end
+  local np = executeCodeEx(0, nil, getMethodName, mi)
+  local mname = np and readString(np, 64) or ""
+  if mname == "StartChooseTagClicked" then chooseAddr = readQword(mi) end
+  if mname == "RefreshTagMenu" then refreshAddr = readQword(mi) end
+end
+deAlloc(iter2)
+if not chooseAddr then error("StartChooseTagClicked not found") end
+if not refreshAddr then error("RefreshTagMenu not found") end
+
+_ccTagSlotOrig = {}
+local patched = 0
+
+-- Patch 1: StartChooseTagClicked — find 83 78 18 05 (cmp [rax+18], 5)
+for off = 0, 0x400 do
+  local a = chooseAddr + off
+  if readBytes(a, 1) == 0x83 and readBytes(a+2, 1) == 0x18 and readBytes(a+3, 1) == 0x05 then
+    _ccTagSlotOrig[1] = {addr = a+3, val = 0x05}
+    writeBytes(a+3, maxSlots)
+    patched = patched + 1
+    break
+  end
+end
+
+-- Patch 2: RefreshTagMenu — find 83 F8 05 (cmp eax, 5)
+for off = 0, 0x1000 do
+  local a = refreshAddr + off
+  if readBytes(a, 1) == 0x83 and readBytes(a+1, 1) == 0xF8 and readBytes(a+2, 1) == 0x05 then
+    _ccTagSlotOrig[2] = {addr = a+2, val = 0x05}
+    writeBytes(a+2, maxSlots)
+    patched = patched + 1
+    break
+  end
+end
+
+if patched < 2 then
+  for _, o in ipairs(_ccTagSlotOrig) do writeBytes(o.addr, o.val) end
+  error("Only patched " .. patched .. "/2 locations")
+end
+
+print(string.format("[Character Creation] Talent slot limit: 5 -> %d", maxSlots))
+
+[DISABLE]
+{$lua}
+if syntaxcheck then return end
+if _ccTagSlotOrig then
+  for _, o in ipairs(_ccTagSlotOrig) do
+    writeBytes(o.addr, o.val)
+  end
+  _ccTagSlotOrig = nil
+  print("[Character Creation] Talent slot limit restored to 5")
+end
+]]></AssemblerScript>
+        </CheatEntry>
+
+        <CheatEntry>
+          <ID>902</ID>
+          <Description>"创建天赋点 [Creation Talent Points]"</Description>
+          <Color>000000</Color>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript><![CDATA[[ENABLE]
+{$lua}
+if syntaxcheck then return end
+_checkGameAlive()
+
+local getDomain = getAddress("GameAssembly.il2cpp_domain_get")
+local getAssemblies = getAddress("GameAssembly.il2cpp_domain_get_assemblies")
+local getImage = getAddress("GameAssembly.il2cpp_assembly_get_image")
+local classFromName = getAddress("GameAssembly.il2cpp_class_from_name")
+
+if not getDomain or getDomain == 0 or not getAssemblies or getAssemblies == 0 or
+   not getImage or getImage == 0 or not classFromName or classFromName == 0 then
+  error("请先连接游戏进程 [Attach to game process first]")
+end
+
+local domain = executeCodeEx(0, nil, getDomain)
+if not domain or domain == 0 then error("请先连接游戏进程 [Attach to game process first]") end
+local sizePtr = allocateMemory(8)
+local asmList = executeCodeEx(0, nil, getAssemblies, domain, sizePtr)
+local asmCount = readInteger(sizePtr)
+deAlloc(sizePtr)
+if not asmList or asmList == 0 or not asmCount or asmCount == 0 then
+  error("请先连接游戏进程 [Attach to game process first]")
+end
+
+local sgsc = nil
+local ns = allocateMemory(16); writeString(ns, "")
+local cn = allocateMemory(64); writeString(cn, "StartGameSettingController")
+for i = 0, asmCount - 1 do
+  local asm = readQword(asmList + i * 8)
+  if asm and asm ~= 0 then
+    local img = executeCodeEx(0, nil, getImage, asm)
+    if img and img ~= 0 then
+      local k = executeCodeEx(0, nil, classFromName, img, ns, cn)
+      if k and k ~= 0 then sgsc = k; break end
+    end
+  end
+end
+deAlloc(ns); deAlloc(cn)
+if not sgsc then error("请先进入角色创建界面 [Enter character creation screen first]") end
+
+local sf = readQword(sgsc + 0xB8)
+local inst = readQword(sf)
+if not inst or inst == 0 then error("StartGameSettingController instance null") end
+
+local player = readQword(inst + 0x18)
+if not player or player == 0 then error("请先进入角色创建界面 [Enter character creation screen first]") end
+
+local current = readFloat(player + 0x35C)
+local input = InputQuery("Creation Talent Points", string.format("Current: %.0f. Enter new value:", current), "999")
+if not input then return end
+local val = tonumber(input)
+if not val or val < 0 then error("Invalid value") end
+
+writeFloat(player + 0x35C, val)
+print(string.format("[Character Creation] Talent points: %.0f -> %.0f", current, val))
+
+[DISABLE]
+{$lua}
+if syntaxcheck then return end
+print("[Character Creation] Talent points cheat disabled (value already set)")
+]]></AssemblerScript>
+        </CheatEntry>
+
+      </CheatEntries>
+    </CheatEntry>
+
   </CheatEntries>
   <LuaScript><![CDATA[
 -- ============================================================
@@ -2915,6 +3113,27 @@ _ia_hookInstalled = nil
 -- Called once per session, results cached globally.
 -- ============================================================
 -- All method RVAs are resolved at runtime — no version-specific constants needed
+
+function _checkGameAlive()
+  local gaAddr = getAddress("GameAssembly.dll")
+  if not gaAddr or gaAddr < 0x100000 then
+    error("游戏未运行 [Game not running] - 请重新打开CE连接游戏")
+  end
+  local testRead = readBytes(gaAddr, 1)
+  if not testRead then
+    -- Stale CE state — reinitialize symbol list
+    reinitializeSymbolhandler()
+    gaAddr = getAddress("GameAssembly.dll")
+    if not gaAddr or gaAddr < 0x100000 then
+      error("CE状态过期 [Stale CE state] - 请关闭CE重新打开")
+    end
+    testRead = readBytes(gaAddr, 1)
+    if not testRead then
+      error("CE状态过期 [Stale CE state] - 请关闭CE重新打开")
+    end
+  end
+  return gaAddr
+end
 
 function _il2cpp_init()
   -- Check if cache is valid: GA base must match (game restart = new base)
@@ -2925,17 +3144,8 @@ function _il2cpp_init()
     _il2cppCache = nil
   end
 
-  local pid = getOpenedProcessID()
-  if not pid or pid == 0 then error("请先用CE连接游戏 [Attach CE to game first]") end
-
-  -- Verify process is actually alive by reading memory (PID can be stale)
-  local gaAddr = getAddress("GameAssembly.dll")
-  if not gaAddr or gaAddr < 0x100000 then error("游戏未运行 [Game not running]") end
-  local testRead = readBytes(gaAddr, 1)
-  if not testRead then
-    _il2cppCache = nil
-    error("游戏已关闭 [Game closed]")
-  end
+  -- Validate game is alive, auto-fix stale symbols
+  local gaAddr = _checkGameAlive()
 
   -- Validate ALL il2cpp exports upfront to prevent nearby allocation popup
   local exports = {
