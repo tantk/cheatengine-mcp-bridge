@@ -3230,6 +3230,85 @@ print("[Character Creation] Talent points cheat disabled (value already set)")
 ]]></AssemblerScript>
         </CheatEntry>
 
+        <CheatEntry>
+          <ID>903</ID>
+          <Description>"分配点数 [Distribute Points]"</Description>
+          <Color>000000</Color>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript><![CDATA[[ENABLE]
+{$lua}
+if syntaxcheck then return end
+_checkGameAlive()
+
+-- Find StartMenuController instance
+local getDomain = getAddress("GameAssembly.il2cpp_domain_get")
+local getAssemblies = getAddress("GameAssembly.il2cpp_domain_get_assemblies")
+local getImage = getAddress("GameAssembly.il2cpp_assembly_get_image")
+local classFromName = getAddress("GameAssembly.il2cpp_class_from_name")
+
+if not getDomain or getDomain == 0 then error("请先连接游戏进程") end
+local domain = executeCodeEx(0, nil, getDomain)
+if not domain or domain == 0 then error("请先连接游戏进程") end
+local sizePtr = allocateMemory(8)
+local asmList = executeCodeEx(0, nil, getAssemblies, domain, sizePtr)
+local asmCount = readInteger(sizePtr)
+deAlloc(sizePtr)
+
+local smc = nil
+local ns = allocateMemory(16); writeString(ns, "")
+local cn = allocateMemory(64); writeString(cn, "StartMenuController")
+for i = 0, asmCount - 1 do
+  local asm = readQword(asmList + i * 8)
+  if asm and asm ~= 0 then
+    local img = executeCodeEx(0, nil, getImage, asm)
+    if img and img ~= 0 then
+      local k = executeCodeEx(0, nil, classFromName, img, ns, cn)
+      if k and k ~= 0 then
+        local sf = readQword(k + 0xB8)
+        smc = readQword(sf)
+        break
+      end
+    end
+  end
+end
+deAlloc(ns); deAlloc(cn)
+if not smc or smc == 0 then error("请先进入角色创建界面 [Enter character creation screen first]") end
+
+local curAttri = readInteger(smc + 0x80) or 0
+local curFight = readInteger(smc + 0x84) or 0
+local curLiving = readInteger(smc + 0x88) or 0
+
+local input = InputQuery("Distribute Points",
+  string.format("Attribute pts (current: %d):", curAttri), "999")
+if not input then return end
+local newAttri = tonumber(input)
+if not newAttri then error("Invalid number") end
+
+local input2 = InputQuery("Distribute Points",
+  string.format("Fight skill pts (current: %d):", curFight), "999")
+if not input2 then return end
+local newFight = tonumber(input2)
+if not newFight then error("Invalid number") end
+
+local input3 = InputQuery("Distribute Points",
+  string.format("Living skill pts (current: %d):", curLiving), "999")
+if not input3 then return end
+local newLiving = tonumber(input3)
+if not newLiving then error("Invalid number") end
+
+writeInteger(smc + 0x80, newAttri)
+writeInteger(smc + 0x84, newFight)
+writeInteger(smc + 0x88, newLiving)
+
+print(string.format("[Character Creation] Points: attri %d->%d, fight %d->%d, living %d->%d",
+  curAttri, newAttri, curFight, newFight, curLiving, newLiving))
+
+[DISABLE]
+{$lua}
+if syntaxcheck then return end
+]]></AssemblerScript>
+        </CheatEntry>
+
       </CheatEntries>
     </CheatEntry>
 
