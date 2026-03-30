@@ -3515,7 +3515,7 @@ if syntaxcheck then return end
 
         <CheatEntry>
           <ID>951</ID>
-          <Description>"武学奇才事件 [Martial Prodigy Event]"</Description>
+          <Description>"武学奇才事件 [Martial Prodigy Event] (WIP - reveal only)"</Description>
           <Color>000000</Color>
           <VariableType>Auto Assembler Script</VariableType>
           <AssemblerScript><![CDATA[[ENABLE]
