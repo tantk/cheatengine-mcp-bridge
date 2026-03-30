@@ -1680,6 +1680,8 @@ label(doCreateAndAdd)
 label(doAllocAndCtor)
 label(doGenEquip)
 label(doGenHero)
+label(skipNPCSkill)
+label(skipNPCItem)
 label(genHeroDone)
 label(genHeroError)
 label(doSimpleCall)
@@ -1857,6 +1859,20 @@ doGenHero:
   test rax,rax
   jz genHeroError
   mov [rbx+08],rax
+  mov rax,[rbx+78]
+  test rax,rax
+  jz skipNPCSkill
+  mov rcx,[rbx+20]
+  mov rdx,[rbx+08]
+  call rax
+skipNPCSkill:
+  mov rax,[rbx+80]
+  test rax,rax
+  jz skipNPCItem
+  mov rcx,[rbx+20]
+  mov rdx,[rbx+08]
+  call rax
+skipNPCItem:
   mov rax,[rbx+70]
   test rax,rax
   jz genHeroDone
@@ -2202,6 +2218,8 @@ local function discover()
       local addr = readQword(mi)
       local rva = addr - S.base
       if mn == "ManagePlayerRecruitHero" and not RVA.recruitHero then RVA.recruitHero = rva end
+      if mn == "RandomGenerateNPCSkill" and not RVA.genNPCSkill then RVA.genNPCSkill = rva end
+      if mn == "RandomGenerateNPCItem" and not RVA.genNPCItem then RVA.genNPCItem = rva end
       if mn == "GenerateHeroData" and not RVA.genHeroData9 then
         -- Check if this is the 9-param overload (has sexLimit param)
         local p6 = executeCodeEx(0, nil, iterGetParamName, mi, 6)
@@ -2559,10 +2577,14 @@ local function generateHero(forceID, heroForceLv, sexLimit, timeout)
 
   -- cmd=5: GenerateHeroData(9) + ManagePlayerRecruitHero
   writeInteger(cb + 0x10, forceID or 0)
-  writeInteger(cb + 0x14, heroForceLv or 1)
+  local effectiveLv = math.floor((heroForceLv or 10) * 0.5 - 0.5)
+  if effectiveLv < 0 then effectiveLv = 0 end
+  writeFloat(cb + 0x14, effectiveLv * 1.0)
   writeInteger(cb + 0x18, sexLimit or 0)
   writeQword(cb + 0x68, base + RVA.genHeroData9)
   writeQword(cb + 0x70, base + RVA.recruitHero)
+  writeQword(cb + 0x78, RVA.genNPCSkill and (base + RVA.genNPCSkill) or 0)
+  writeQword(cb + 0x80, RVA.genNPCItem and (base + RVA.genNPCItem) or 0)
 
   writeInteger(cb + 0x04, 0)
   writeInteger(cb, 5)
@@ -3035,11 +3057,8 @@ lbl.Font.Size = 9; lbl.Font.Style = "fsBold"; Y = Y + 20
 -- Row 1: Faction, Rank, Sex
 local lblForce = createLabel(frm); lblForce.Left = 10; lblForce.Top = Y + 3; lblForce.Caption = "My Faction"
 lblForce.Font.Style = "fsBold"
-local lblLv = createLabel(frm); lblLv.Left = 175; lblLv.Top = Y + 3; lblLv.Caption = "Lv:"
-local cmbLv = createComboBox(frm); cmbLv.Left = 195; cmbLv.Top = Y; cmbLv.Width = 35
-cmbLv.Items.add("0"); cmbLv.Items.add("1"); cmbLv.Items.add("2")
-cmbLv.Items.add("3"); cmbLv.Items.add("4"); cmbLv.Items.add("5")
-cmbLv.ItemIndex = 1
+local lblLv = createLabel(frm); lblLv.Left = 175; lblLv.Top = Y + 3; lblLv.Caption = "Diff:"
+local edtDiff = createEdit(frm); edtDiff.Left = 200; edtDiff.Top = Y; edtDiff.Width = 30; edtDiff.Text = "10"
 local cmbSex = createComboBox(frm); cmbSex.Left = 235; cmbSex.Top = Y; cmbSex.Width = 65
 cmbSex.Items.add("Random"); cmbSex.Items.add("Male"); cmbSex.Items.add("Female")
 cmbSex.ItemIndex = 0
@@ -3100,7 +3119,7 @@ end
 btnGenHero.OnClick = safeClick(function()
   if not S.ready then setStatus("请先连接游戏! [Connect first!]", 0x0000FF); return end
   local fid = readInteger(S.hero + 0x84) or 0
-  local lv = cmbLv.ItemIndex
+  local lv = tonumber(edtDiff.Text) or 10
   local sex = cmbSex.ItemIndex
   setStatus("Generating...", 0x008080)
   local ok, msg = generateHero(fid, lv, sex)
