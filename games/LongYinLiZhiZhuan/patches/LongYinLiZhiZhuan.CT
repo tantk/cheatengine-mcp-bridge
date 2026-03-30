@@ -1685,6 +1685,7 @@ label(skipNPCItem)
 label(genHeroDone)
 label(genHeroError)
 label(doSimpleCall)
+label(doThreeIntCall)
 label(skipSetup)
 label(cmdDone)
 label(cmdError)
@@ -1716,6 +1717,8 @@ hookCode:
   je doGenHero
   cmp eax,6
   je doSimpleCall
+  cmp eax,7
+  je doThreeIntCall
   mov dword ptr [rbx+04],2
   mov dword ptr [rbx],0
   jmp noCmd
@@ -1904,6 +1907,27 @@ genHeroError:
   mov dword ptr [rbx+04],2
   mov dword ptr [rbx],0
   jmp noCmd
+
+doThreeIntCall:
+  push rcx
+  push rdx
+  push r8
+  push r9
+  push r10
+  push r11
+  sub rsp,58
+  mov rcx,[rbx+20]
+  test rcx,rcx
+  jz cmdError
+  mov edx,[rbx+10]
+  mov r8d,[rbx+14]
+  mov r9d,[rbx+18]
+  mov rax,[rbx+68]
+  call rax
+  test rax,rax
+  jz cmdError
+  mov [rbx+08],rax
+  jmp cmdDone
 
 doSimpleCall:
   push rcx
@@ -2192,7 +2216,7 @@ local function discover()
     RVA.genMedById = resolveRVA(gcClass, "GenerateMedData", 2)
     RVA.genFoodById = resolveRVA(gcClass, "GenerateFoodData", 2)
     RVA.genHorseById = resolveRVA(gcClass, "GenerateHorseData", 2)
-    RVA.genMaterial = resolveRVA(gcClass, "GenerateMaterial", 2)
+    RVA.genMaterial = resolveRVA(gcClass, "GenerateMaterial", 3)
     RVA.genHorseArmor = resolveRVA(gcClass, "GenerateHorseArmorData", 2)
   end
   S.setBookAddr = S.base + (RVA.setBook or 0)
@@ -2474,11 +2498,11 @@ local function addMaterial(subType, itemLv, rareLv)
     if not ok then return false, ptr end
     return true, getItemName(ptr)
   end
-  -- Use GenerateMaterial(materialType, itemLv) via cmd=4
-  -- cmd=4: rcx=GC, edx=[+0x10]=materialType, r8d=[+0x14]=itemLv
+  -- Use GenerateMaterial(materialType, itemLv, bossLv) via cmd=4
+  -- bossLv is read from xmm3 (not r9!), cmd=4 sets xmm3 from [+0x18]
   writeInteger(S.cmdBuf + 0x10, subType)
   writeInteger(S.cmdBuf + 0x14, itemLv)
-  writeFloat(S.cmdBuf + 0x18, 0)
+  writeFloat(S.cmdBuf + 0x18, rareLv * 1.0)
   writeQword(S.cmdBuf + 0x68, S.base + RVA.genMaterial)
   writeInteger(S.cmdBuf + 0x04, 0)
   writeInteger(S.cmdBuf, 4)
@@ -2504,8 +2528,8 @@ local function addMedFood(dbIndex, dbOffset)
   -- Use game's GenerateMedData(id, bossLv) or GenerateFoodData(id, bossLv) via cmd=4
   -- cmd=4: rcx=GC, edx=[+0x10]=id, r8d=[+0x14]=bossLv, call [+0x68]
   writeInteger(S.cmdBuf + 0x10, dbIndex)
-  writeInteger(S.cmdBuf + 0x14, 5)  -- bossLv=5 (max quality)
-  writeFloat(S.cmdBuf + 0x18, 1.0)
+  writeInteger(S.cmdBuf + 0x14, 0)
+  writeFloat(S.cmdBuf + 0x18, 5.0)  -- bossLv via xmm2
   writeQword(S.cmdBuf + 0x68, S.base + genRVA)
   writeInteger(S.cmdBuf + 0x04, 0)
   writeInteger(S.cmdBuf, 4)
@@ -2529,9 +2553,10 @@ local function addHorse(dbIndex, rareLv)
   if not RVA.genHorseById then return false, "GenerateHorseData not resolved" end
 
   -- Use game's GenerateHorseData(id, bossLv) via cmd=4
+  -- bossLv read from xmm2, cmd=4 sets xmm2 from [+0x18]
   writeInteger(S.cmdBuf + 0x10, dbIndex)
-  writeInteger(S.cmdBuf + 0x14, rareLv or 5)
-  writeFloat(S.cmdBuf + 0x18, 1.0)
+  writeInteger(S.cmdBuf + 0x14, 0)
+  writeFloat(S.cmdBuf + 0x18, (rareLv or 5) * 1.0)
   writeQword(S.cmdBuf + 0x68, S.base + RVA.genHorseById)
   writeInteger(S.cmdBuf + 0x04, 0)
   writeInteger(S.cmdBuf, 4)
@@ -2888,34 +2913,34 @@ for _, m in ipairs(matDB) do cmbMT.Items.add(m[1] .. "-" .. m[2]) end; cmbMT.Ite
 local lblML = createLabel(frm); lblML.Left = 160; lblML.Top = Y + 3; lblML.Caption = "Lv:"
 local cmbML = createComboBox(frm); cmbML.Left = 180; cmbML.Top = Y; cmbML.Width = 35
 for i = 0, 5 do cmbML.Items.add(tostring(i)) end; cmbML.ItemIndex = 5
+local lblMB = createLabel(frm); lblMB.Left = 220; lblMB.Top = Y + 3; lblMB.Caption = "BossLv:"
+local edtMB = createEdit(frm); edtMB.Left = 270; edtMB.Top = Y; edtMB.Width = 30; edtMB.Text = "5"
 local btnMat = createButton(frm); btnMat.Left = 400; btnMat.Top = Y - 2; btnMat.Width = 100; btnMat.Height = 24
 btnMat.Caption = "Add Material"
 btnMat.OnClick = safeClick(function()
   if not S.ready then setStatus("请先连接游戏! [Connect first!]", 0x0000FF); return end
-  log(string.format("BTN AddMaterial: type=%d lv=%d", cmbMT.ItemIndex, cmbML.ItemIndex))
+  local bossLv = tonumber(edtMB.Text) or 5
+  log(string.format("BTN AddMaterial: type=%d lv=%d boss=%d", cmbMT.ItemIndex, cmbML.ItemIndex, bossLv))
   setStatus("Adding...", 0x008080)
-  local ok, msg = addMaterial(cmbMT.ItemIndex, cmbML.ItemIndex, 5)
+  local ok, msg = addMaterial(cmbMT.ItemIndex, cmbML.ItemIndex, bossLv)
   setStatus(ok and ("Added: " .. msg) or ("ERR: " .. msg), ok and 0x008000 or 0x0000FF)
 end)
 Y = Y + 32
 
 lbl = createLabel(frm); lbl.Left = 10; lbl.Top = Y; lbl.Caption = "Horse 马匹"
 lbl.Font.Size = 9; lbl.Font.Style = "fsBold"; Y = Y + 20
-local cmbHr = createComboBox(frm); cmbHr.Left = 10; cmbHr.Top = Y; cmbHr.Width = 280
+local cmbHr = createComboBox(frm); cmbHr.Left = 10; cmbHr.Top = Y; cmbHr.Width = 240
 for _, h in ipairs(horseDB) do cmbHr.Items.add(string.format("[%d] %s", h[1], h[2])) end; cmbHr.ItemIndex = 0
-local lblHrR = createLabel(frm); lblHrR.Left = 295; lblHrR.Top = Y + 3; lblHrR.Caption = "品质:"
-local cmbHrR = createComboBox(frm); cmbHrR.Left = 325; cmbHrR.Top = Y; cmbHrR.Width = 70
-cmbHrR.Items.add("0劣质"); cmbHrR.Items.add("1普通"); cmbHrR.Items.add("2优质")
-cmbHrR.Items.add("3精良"); cmbHrR.Items.add("4完美"); cmbHrR.Items.add("5绝世")
-cmbHrR.ItemIndex = 5
+local lblHrB = createLabel(frm); lblHrB.Left = 255; lblHrB.Top = Y + 3; lblHrB.Caption = "BossLv:"
+local edtHrB = createEdit(frm); edtHrB.Left = 300; edtHrB.Top = Y; edtHrB.Width = 30; edtHrB.Text = "5"
 local btnHr = createButton(frm); btnHr.Left = 400; btnHr.Top = Y - 2; btnHr.Width = 100; btnHr.Height = 24
 btnHr.Caption = "Add Horse"
 btnHr.OnClick = safeClick(function()
   if not S.ready then setStatus("请先连接游戏! [Connect first!]", 0x0000FF); return end
-  local rare = cmbHrR.ItemIndex
-  log(string.format("BTN AddHorse: idx=%d rare=%d", horseDB[cmbHr.ItemIndex + 1][1], rare))
+  local bossLv = tonumber(edtHrB.Text) or 5
+  log(string.format("BTN AddHorse: idx=%d boss=%d", horseDB[cmbHr.ItemIndex + 1][1], bossLv))
   setStatus("Adding...", 0x008080)
-  local ok, msg = addHorse(horseDB[cmbHr.ItemIndex + 1][1], rare)
+  local ok, msg = addHorse(horseDB[cmbHr.ItemIndex + 1][1], bossLv)
   setStatus(ok and ("Added: " .. msg) or ("ERR: " .. msg), ok and 0x008000 or 0x0000FF)
 end)
 Y = Y + 32
