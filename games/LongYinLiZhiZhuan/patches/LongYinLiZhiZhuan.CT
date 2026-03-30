@@ -2897,7 +2897,7 @@ cmbSk.ItemIndex = 0
 local edtID = createEdit(frm); edtID.Left = 340; edtID.Top = Y; edtID.Width = 50; edtID.Text = ""
 local lblIDHint = createLabel(frm); lblIDHint.Left = 342; lblIDHint.Top = Y - 14; lblIDHint.Caption = "ID 0-999"; lblIDHint.Font.Size = 7; lblIDHint.Font.Color = 0x808080
 local btnBook = createButton(frm); btnBook.Left = 410; btnBook.Top = Y - 2; btnBook.Width = 90; btnBook.Height = 24
-btnBook.Caption = "Add Book"
+btnBook.Caption = "增添 Book"
 btnBook.OnClick = safeClick(function()
   if not S.ready then setStatus("请先连接游戏! [Connect first!]", 0x0000FF); return end
   local sid = edtID.Text ~= "" and tonumber(edtID.Text) or skillDB[cmbSk.ItemIndex + 1][1]
@@ -2918,7 +2918,7 @@ for i = 0, 5 do cmbML.Items.add(tostring(i)) end; cmbML.ItemIndex = 5
 local lblMB = createLabel(frm); lblMB.Left = 280; lblMB.Top = Y + 3; lblMB.Caption = "Rare:"
 local edtMB = createEdit(frm); edtMB.Left = 325; edtMB.Top = Y; edtMB.Width = 30; edtMB.Text = "5"
 local btnMat = createButton(frm); btnMat.Left = 410; btnMat.Top = Y - 2; btnMat.Width = 90; btnMat.Height = 24
-btnMat.Caption = "Add Material"
+btnMat.Caption = "增添 Material"
 btnMat.OnClick = safeClick(function()
   if not S.ready then setStatus("请先连接游戏! [Connect first!]", 0x0000FF); return end
   local bossLv = tonumber(edtMB.Text) or 5
@@ -2936,7 +2936,7 @@ for _, h in ipairs(horseDB) do cmbHr.Items.add(string.format("[%d] %s", h[1], h[
 local lblHrB = createLabel(frm); lblHrB.Left = 280; lblHrB.Top = Y + 3; lblHrB.Caption = "Rare:"
 local edtHrB = createEdit(frm); edtHrB.Left = 325; edtHrB.Top = Y; edtHrB.Width = 30; edtHrB.Text = "5"
 local btnHr = createButton(frm); btnHr.Left = 410; btnHr.Top = Y - 2; btnHr.Width = 90; btnHr.Height = 24
-btnHr.Caption = "Add Horse"
+btnHr.Caption = "增添 Horse"
 btnHr.OnClick = safeClick(function()
   if not S.ready then setStatus("请先连接游戏! [Connect first!]", 0x0000FF); return end
   local bossLv = tonumber(edtHrB.Text) or 5
@@ -3002,7 +3002,7 @@ cmbEqType.OnChange = function() refreshEqItems() end
 _refreshEqItemsFn = refreshEqItems
 
 local btnEq = createButton(frm); btnEq.Left = 410; btnEq.Top = Y - 2; btnEq.Width = 90; btnEq.Height = 24
-btnEq.Caption = "Add Equip"
+btnEq.Caption = "增添 Equip"
 btnEq.OnClick = safeClick(function()
   if not S.ready then setStatus("请先连接游戏! [Connect first!]", 0x0000FF); return end
   local dbInfo = equipDBs[cmbEqType.ItemIndex + 1]
@@ -3031,7 +3031,7 @@ cmbTrRare.ItemIndex = 5
 local lblTrB = createLabel(frm); lblTrB.Left = 280; lblTrB.Top = Y + 3; lblTrB.Caption = "Rare:"
 local edtTrB = createEdit(frm); edtTrB.Left = 325; edtTrB.Top = Y; edtTrB.Width = 30; edtTrB.Text = "5"
 local btnTr = createButton(frm); btnTr.Left = 410; btnTr.Top = Y - 2; btnTr.Width = 90; btnTr.Height = 24
-btnTr.Caption = "Add Treasure"
+btnTr.Caption = "增添 Treasure"
 btnTr.OnClick = safeClick(function()
   if not S.ready then setStatus("请先连接游戏! [Connect first!]", 0x0000FF); return end
   local typeIdx = cmbTrType.ItemIndex
@@ -3052,7 +3052,7 @@ for _, m in ipairs(medDB) do cmbMed.Items.add(string.format("[%d] %s", m[1], m[2
 local lblMdB = createLabel(frm); lblMdB.Left = 285; lblMdB.Top = Y + 3; lblMdB.Caption = "Rare:"
 local edtMdB = createEdit(frm); edtMdB.Left = 330; edtMdB.Top = Y; edtMdB.Width = 30; edtMdB.Text = "5"
 local btnMed = createButton(frm); btnMed.Left = 410; btnMed.Top = Y - 2; btnMed.Width = 90; btnMed.Height = 24
-btnMed.Caption = "Add Medicine"
+btnMed.Caption = "增添 Medicine"
 btnMed.OnClick = safeClick(function()
   if not S.ready then setStatus("请先连接游戏! [Connect first!]", 0x0000FF); return end
   local bossLv = tonumber(edtMdB.Text) or 5
@@ -3070,7 +3070,7 @@ for _, f in ipairs(foodDB) do cmbFd.Items.add(string.format("[%d] %s", f[1], f[2
 local lblFdB = createLabel(frm); lblFdB.Left = 285; lblFdB.Top = Y + 3; lblFdB.Caption = "Rare:"
 local edtFdB = createEdit(frm); edtFdB.Left = 330; edtFdB.Top = Y; edtFdB.Width = 30; edtFdB.Text = "5"
 local btnFd = createButton(frm); btnFd.Left = 410; btnFd.Top = Y - 2; btnFd.Width = 90; btnFd.Height = 24
-btnFd.Caption = "Add Food"
+btnFd.Caption = "增添 Food"
 btnFd.OnClick = safeClick(function()
   if not S.ready then setStatus("请先连接游戏! [Connect first!]", 0x0000FF); return end
   local bossLv = tonumber(edtFdB.Text) or 5
@@ -3104,7 +3104,7 @@ local edtAge = createEdit(frm); edtAge.Left = 110; edtAge.Top = Y; edtAge.Width 
 local lblLoyal = createLabel(frm); lblLoyal.Left = 150; lblLoyal.Top = Y + 3; lblLoyal.Caption = "Loyal:"
 local edtLoyal = createEdit(frm); edtLoyal.Left = 185; edtLoyal.Top = Y; edtLoyal.Width = 35; edtLoyal.Text = "0"
 local btnGenHero = createButton(frm); btnGenHero.Left = 310; btnGenHero.Top = Y - 2; btnGenHero.Width = 190; btnGenHero.Height = 26
-btnGenHero.Caption = "Generate Hero"
+btnGenHero.Caption = "生成 Hero"
 local function boostList(heroData, baseOff, maxOff, boost)
   local baseList = readQword(heroData + baseOff)
   local maxList = readQword(heroData + maxOff)
