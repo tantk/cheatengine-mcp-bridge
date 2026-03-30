@@ -1031,59 +1031,6 @@ print("[Building] (toggle again to complete new constructions)")
           <Options moHideChildren="1" moAllowManualCollapseAndExpand="1"/>
           <Color>008000</Color>
           <CheatEntries>
-            <CheatEntry>
-              <ID>1430</ID>
-              <Description>"揭示副本全图 (每个副本点一次) [Reveal Dungeon Map - click per dungeon]"</Description>
-              <Color>000000</Color>
-              <VariableType>Auto Assembler Script</VariableType>
-              <AssemblerScript><![CDATA[[ENABLE]
-{$lua}
-if syntaxcheck then return end
-local c = _il2cpp_init()
-local ecClass = c.findClass("ExploreController")
-if not ecClass then error("请先进入副本 [Enter a dungeon first]") end
-local ecStatic = readQword(ecClass + 0xB8)
-if not ecStatic or ecStatic == 0 then error("请先进入副本 [Enter a dungeon first]") end
-local ecInst = readQword(ecStatic + 0x8)
-if not ecInst or ecInst == 0 then error("请先进入副本 [Enter a dungeon first]") end
--- Validate dungeon is active: inited (+0xD0) must be true
-local inited = readBytes(ecInst + 0xD0, 1)
-if not inited or inited == 0 then error("请先进入副本 [Enter a dungeon first]") end
-local seeAllAddr = _findMethodAddr(ecClass, "SeeAllTile", 0)
-if not seeAllAddr then error("SeeAllTile not found") end
-local cb = getAddress("cmdBuf")
-if cb and cb ~= 0 and readInteger(cb + 0x38) == 1 then
-  -- Main thread via cmd=4: temporarily set GC slot to ecInst
-  local origGC = readQword(cb + 0x20)
-  writeQword(cb + 0x20, ecInst)
-  writeQword(cb + 0x68, seeAllAddr)
-  writeInteger(cb + 0x10, 0)
-  writeInteger(cb + 0x14, 0)
-  writeFloat(cb + 0x18, 0)
-  writeInteger(cb + 0x04, 0)
-  writeInteger(cb, 4)
-  local elapsed = 0
-  while elapsed < 2000 do
-    if readInteger(cb + 0x04) ~= 0 then break end
-    sleep(16); elapsed = elapsed + 16
-  end
-  -- Restore GC
-  writeQword(cb + 0x20, origGC)
-else
-  executeCodeEx(0, nil, seeAllAddr, ecInst)
-end
-print("[Fog] 副本全图已揭示! [Dungeon map revealed!]")
--- Auto uncheck so user can click again in next dungeon
-local mr = memrec
-if mr then mr.Active = false end
-{$asm}
-
-[DISABLE]
-{$lua}
-if syntaxcheck then return end
-{$asm}
-]]></AssemblerScript>
-            </CheatEntry>
           </CheatEntries>
         </CheatEntry>
 
