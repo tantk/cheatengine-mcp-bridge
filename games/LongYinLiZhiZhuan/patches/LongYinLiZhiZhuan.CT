@@ -1026,7 +1026,7 @@ print("[Building] (toggle again to complete new constructions)")
 
         <CheatEntry>
           <ID>97</ID>
-          <Description>"--- 探索 [Exploration] ---"</Description>
+          <Description>"--- 探索 (在物品添加器里) [Exploration - in Item Adder] ---"</Description>
           <GroupHeader>1</GroupHeader>
           <Options moHideChildren="1" moAllowManualCollapseAndExpand="1"/>
           <Color>008000</Color>
@@ -2189,9 +2189,11 @@ local function discover()
     RVA.mergeList = resolveRVA(ildClass, "MergeList", 1)
   end
   if gcClass then
-    RVA.genMedById = resolveRVA(gcClass, "GenerateMedData", 3)
-    RVA.genFoodById = resolveRVA(gcClass, "GenerateFoodData", 4)
-    RVA.genHorseById = resolveRVA(gcClass, "GenerateHorseData", 3)
+    RVA.genMedById = resolveRVA(gcClass, "GenerateMedData", 2)
+    RVA.genFoodById = resolveRVA(gcClass, "GenerateFoodData", 2)
+    RVA.genHorseById = resolveRVA(gcClass, "GenerateHorseData", 2)
+    RVA.genMaterial = resolveRVA(gcClass, "GenerateMaterial", 3)
+    RVA.genHorseArmor = resolveRVA(gcClass, "GenerateHorseArmorData", 2)
   end
   S.setBookAddr = S.base + (RVA.setBook or 0)
 
@@ -2472,97 +2474,63 @@ local function addMaterial(subType, itemLv, rareLv)
 end
 
 local function addMedFood(dbIndex, dbOffset)
-  if not S.ready then return false, "请先连接游戏 [Connect first]" end
-  if not S.gdc or S.gdc == 0 then return false, "GDC not found" end
+  if not S.ready or not S.cmdBuf then return false, "请先连接游戏 [Connect first]" end
+  local genRVA = (dbOffset == 0x110) and RVA.genMedById or RVA.genFoodById
+  if not genRVA then return false, "Generate method not resolved" end
 
-  -- Read template from database: gdc + dbOffset -> List -> items[dbIndex]
-  local db = readQword(S.gdc + dbOffset)
-  if not db or db == 0 then return false, "Database null at offset " .. string.format("%X", dbOffset) end
-  local items = readQword(db + 0x10)
-  local count = readInteger(db + 0x18)
-  if dbIndex >= count then return false, string.format("Index %d >= count %d", dbIndex, count) end
-  local template = readQword(items + 0x20 + dbIndex * 8)
-  if not template or template == 0 then return false, "Template null" end
-
-  -- Create new ItemData, init as med(1) or food(2) — on main thread
-  local itemType = (dbOffset == 0x110) and 1 or 2
-  local ok2, ni = mainThreadAllocCtor(itemType)
-  if not ok2 or not ni or ni == 0 then return false, "alloc fail" end
-
-  -- Copy fields from template to new item (offsets from current build)
-  writeInteger(ni + 0x10, readInteger(template + 0x10) or 0)  -- itemID
-  writeInteger(ni + 0x18, readInteger(template + 0x18) or 0)  -- subType
-  writeQword(ni + 0x20, readQword(template + 0x20) or 0)      -- name
-  writeQword(ni + 0x28, readQword(template + 0x28) or 0)      -- checkName
-  writeQword(ni + 0x30, readQword(template + 0x30) or 0)      -- describe
-  writeInteger(ni + 0x38, readInteger(template + 0x38) or 0)   -- value
-  writeInteger(ni + 0x3C, readInteger(template + 0x3C) or 0)   -- itemLv
-  writeInteger(ni + 0x40, readInteger(template + 0x40) or 0)   -- rareLv
-  writeFloat(ni + 0x44, readFloat(template + 0x44) or 0)       -- weight
-  -- medFoodData at auto-detected offset
-  local templateMFD = readQword(template + S.OFF_MEDFOOD)
-  if templateMFD and templateMFD ~= 0 then
-    writeQword(ni + S.OFF_MEDFOOD, templateMFD)
+  -- Use game's GenerateMedData(id, bossLv) or GenerateFoodData(id, bossLv) via cmd=4
+  -- cmd=4: rcx=GC, edx=[+0x10]=id, r8d=[+0x14]=bossLv, call [+0x68]
+  writeInteger(S.cmdBuf + 0x10, dbIndex)
+  writeInteger(S.cmdBuf + 0x14, 5)  -- bossLv=5 (max quality)
+  writeFloat(S.cmdBuf + 0x18, 1.0)
+  writeQword(S.cmdBuf + 0x68, S.base + genRVA)
+  writeInteger(S.cmdBuf + 0x04, 0)
+  writeInteger(S.cmdBuf, 4)
+  local elapsed = 0
+  while elapsed < 3000 do
+    if readInteger(S.cmdBuf + 0x04) ~= 0 then break end
+    sleep(16); elapsed = elapsed + 16
   end
+  if readInteger(S.cmdBuf + 0x04) ~= 1 then return false, "Generation failed" end
+  local newItem = readQword(S.cmdBuf + 0x08)
+  if not newItem or newItem == 0 then return false, "Returned null" end
 
-  -- Add to inventory via main-thread GetItem
-  local ok, result = mainThreadGetItem(ni)
+  local itemName = getItemName(newItem)
+  local ok, result = mainThreadGetItem(newItem)
   if not ok then return false, result end
-  return true, getItemName(ni)
+  return true, itemName
 end
 
 local function addHorse(dbIndex, rareLv)
-  if not S.ready then return false, "请先连接游戏 [Connect first]" end
-  if not S.gdc or S.gdc == 0 then return false, "GDC not found" end
-  log(string.format("addHorse: idx=%d rare=%d gdc=%s", dbIndex, rareLv or -1, toHex(S.gdc)))
+  if not S.ready or not S.cmdBuf then return false, "请先连接游戏 [Connect first]" end
+  if not RVA.genHorseById then return false, "GenerateHorseData not resolved" end
 
-  -- Read template from horseDataBase (offset 0x120)
-  local db = readQword(S.gdc + 0x120)
-  if not db or db == 0 then return false, "HorseDataBase null" end
-  local items = readQword(db + 0x10)
-  local count = readInteger(db + 0x18)
-  if dbIndex >= count then return false, string.format("Index %d >= count %d", dbIndex, count) end
-  local template = readQword(items + 0x20 + dbIndex * 8)
-  if not template or template == 0 then return false, "Template null" end
+  -- Use game's GenerateHorseData(id, bossLv) via cmd=4
+  writeInteger(S.cmdBuf + 0x10, dbIndex)
+  writeInteger(S.cmdBuf + 0x14, rareLv or 5)
+  writeFloat(S.cmdBuf + 0x18, 1.0)
+  writeQword(S.cmdBuf + 0x68, S.base + RVA.genHorseById)
+  writeInteger(S.cmdBuf + 0x04, 0)
+  writeInteger(S.cmdBuf, 4)
+  local elapsed = 0
+  while elapsed < 3000 do
+    if readInteger(S.cmdBuf + 0x04) ~= 0 then break end
+    sleep(16); elapsed = elapsed + 16
+  end
+  if readInteger(S.cmdBuf + 0x04) ~= 1 then return false, "Generation failed" end
+  local newItem = readQword(S.cmdBuf + 0x08)
+  if not newItem or newItem == 0 then return false, "Returned null" end
 
-  -- Create new ItemData, init as horse (type=6) — on main thread
-  local ok2, ni = mainThreadAllocCtor(6)
-  if not ok2 or not ni or ni == 0 then return false, "alloc fail" end
-
-  -- Copy fields from template
-  writeInteger(ni + 0x10, readInteger(template + 0x10) or 0)  -- itemID
-  writeInteger(ni + 0x18, readInteger(template + 0x18) or 0)  -- subType
-  writeQword(ni + 0x20, readQword(template + 0x20) or 0)      -- name
-  writeQword(ni + 0x28, readQword(template + 0x28) or 0)      -- checkName
-  writeQword(ni + 0x30, readQword(template + 0x30) or 0)      -- describe
-  writeInteger(ni + 0x38, readInteger(template + 0x38) or 0)   -- value
-  writeInteger(ni + 0x3C, readInteger(template + 0x3C) or 0)   -- itemLv
-  writeInteger(ni + 0x40, rareLv or readInteger(template + 0x40) or 0)  -- rareLv (user-selected or template)
-  writeFloat(ni + 0x44, readFloat(template + 0x44) or 0)       -- weight
-  -- horseData at auto-detected offset — clone template then set 100% tame
-  local templateHD = readQword(template + S.OFF_HORSE)
-  if templateHD and templateHD ~= 0 then
-    -- Allocate new HorseData object so we don't modify the template
-    local hdClass = readQword(templateHD) -- klass ptr from template object
-    local newHD = executeCodeEx(0, nil, S.objNew, hdClass)
-    if newHD and newHD ~= 0 then
-      -- Copy all fields from template (0x10 to 0x44 = 52 bytes of data)
-      for off = 0x10, 0x44, 4 do
-        writeInteger(newHD + off, readInteger(templateHD + off) or 0)
-      end
-      -- Set favorRate to 1.0 (100% tame)
-      writeFloat(newHD + 0x3C, 1.0)
-      writeQword(ni + S.OFF_HORSE, newHD)
-    else
-      -- Fallback: share template HorseData
-      writeQword(ni + S.OFF_HORSE, templateHD)
-    end
+  -- Set 100% tame on the generated horse
+  local horseData = readQword(newItem + S.OFF_HORSE)
+  if horseData and horseData ~= 0 then
+    writeFloat(horseData + 0x3C, 1.0)
   end
 
-  -- Add to inventory via main-thread GetItem
-  local ok, result = mainThreadGetItem(ni)
+  local itemName = getItemName(newItem)
+  local ok, result = mainThreadGetItem(newItem)
   if not ok then return false, result end
-  return true, getItemName(ni)
+  return true, itemName
 end
 
 -- ============================================================
@@ -2582,7 +2550,7 @@ local function generateHero(forceID, heroForceLv, sexLimit, timeout)
 
   -- cmd=5: GenerateHeroData(9) + ManagePlayerRecruitHero
   writeInteger(cb + 0x10, forceID or 0)
-  writeFloat(cb + 0x14, (heroForceLv or 10) * 1.0)
+  writeInteger(cb + 0x14, heroForceLv or 5)
   writeInteger(cb + 0x18, sexLimit or 0)
   writeQword(cb + 0x68, base + RVA.genHeroData9)
   writeQword(cb + 0x70, base + RVA.recruitHero)
@@ -3060,8 +3028,11 @@ lbl.Font.Size = 9; lbl.Font.Style = "fsBold"; Y = Y + 20
 -- Row 1: Faction, Rank, Sex
 local lblForce = createLabel(frm); lblForce.Left = 10; lblForce.Top = Y + 3; lblForce.Caption = "My Faction"
 lblForce.Font.Style = "fsBold"
-local lblLv = createLabel(frm); lblLv.Left = 175; lblLv.Top = Y + 3; lblLv.Caption = "Diff:"
-local edtDiff = createEdit(frm); edtDiff.Left = 200; edtDiff.Top = Y; edtDiff.Width = 30; edtDiff.Text = "10"
+local lblLv = createLabel(frm); lblLv.Left = 175; lblLv.Top = Y + 3; lblLv.Caption = "Lv:"
+local cmbLv = createComboBox(frm); cmbLv.Left = 195; cmbLv.Top = Y; cmbLv.Width = 35
+cmbLv.Items.add("0"); cmbLv.Items.add("1"); cmbLv.Items.add("2")
+cmbLv.Items.add("3"); cmbLv.Items.add("4"); cmbLv.Items.add("5")
+cmbLv.ItemIndex = 5
 local cmbSex = createComboBox(frm); cmbSex.Left = 235; cmbSex.Top = Y; cmbSex.Width = 65
 cmbSex.Items.add("Random"); cmbSex.Items.add("Male"); cmbSex.Items.add("Female")
 cmbSex.ItemIndex = 0
@@ -3122,7 +3093,7 @@ end
 btnGenHero.OnClick = safeClick(function()
   if not S.ready then setStatus("请先连接游戏! [Connect first!]", 0x0000FF); return end
   local fid = readInteger(S.hero + 0x84) or 0
-  local lv = tonumber(edtDiff.Text) or 10
+  local lv = cmbLv.ItemIndex
   local sex = cmbSex.ItemIndex
   setStatus("Generating...", 0x008080)
   local ok, msg = generateHero(fid, lv, sex)
@@ -3529,7 +3500,7 @@ if syntaxcheck then return end
 
     <CheatEntry>
       <ID>95</ID>
-      <Description>"--- 世界事件 [World Events] ---"</Description>
+      <Description>"--- 世界事件 (开发中) [World Events (WIP)] ---"</Description>
       <Options moHideChildren="1" moAllowManualCollapseAndExpand="1"/>
       <GroupHeader>1</GroupHeader>
       <Color>804000</Color>
