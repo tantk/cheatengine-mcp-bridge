@@ -3085,7 +3085,7 @@ Y = Y + 32
 lbl = createLabel(frm); lbl.Left = 10; lbl.Top = Y; lbl.Caption = "Generate Hero 生成弟子"
 lbl.Font.Size = 9; lbl.Font.Style = "fsBold"; Y = Y + 20
 -- Row 1: Faction, Rank, Sex
-local lblForce = createLabel(frm); lblForce.Left = 10; lblForce.Top = Y + 3; lblForce.Caption = "My Faction"
+local lblForce = createLabel(frm); lblForce.Left = 10; lblForce.Top = Y + 3; lblForce.Caption = "My Faction 我的门派"
 lblForce.Font.Style = "fsBold"
 local lblLv = createLabel(frm); lblLv.Left = 175; lblLv.Top = Y + 3; lblLv.Caption = "Lv:"
 local cmbLv = createComboBox(frm); cmbLv.Left = 195; cmbLv.Top = Y; cmbLv.Width = 35
@@ -3097,12 +3097,12 @@ cmbSex.Items.add("Random"); cmbSex.Items.add("Male"); cmbSex.Items.add("Female")
 cmbSex.ItemIndex = 0
 Y = Y + 28
 -- Row 2: Base Attri, Fight Skill, Living Skill boost
-local lblBoost = createLabel(frm); lblBoost.Left = 10; lblBoost.Top = Y + 3; lblBoost.Caption = "Stat+:"
-local edtBoost = createEdit(frm); edtBoost.Left = 45; edtBoost.Top = Y; edtBoost.Width = 35; edtBoost.Text = "0"
-local lblAge = createLabel(frm); lblAge.Left = 85; lblAge.Top = Y + 3; lblAge.Caption = "Age:"
-local edtAge = createEdit(frm); edtAge.Left = 110; edtAge.Top = Y; edtAge.Width = 35; edtAge.Text = "0"
-local lblLoyal = createLabel(frm); lblLoyal.Left = 150; lblLoyal.Top = Y + 3; lblLoyal.Caption = "Loyal:"
-local edtLoyal = createEdit(frm); edtLoyal.Left = 185; edtLoyal.Top = Y; edtLoyal.Width = 35; edtLoyal.Text = "0"
+local lblBoost = createLabel(frm); lblBoost.Left = 10; lblBoost.Top = Y + 3; lblBoost.Caption = "Stat+属性:"
+local edtBoost = createEdit(frm); edtBoost.Left = 70; edtBoost.Top = Y; edtBoost.Width = 35; edtBoost.Text = "0"
+local lblAge = createLabel(frm); lblAge.Left = 110; lblAge.Top = Y + 3; lblAge.Caption = "Age年龄:"
+local edtAge = createEdit(frm); edtAge.Left = 160; edtAge.Top = Y; edtAge.Width = 35; edtAge.Text = "0"
+local lblLoyal = createLabel(frm); lblLoyal.Left = 200; lblLoyal.Top = Y + 3; lblLoyal.Caption = "Loyal忠诚:"
+local edtLoyal = createEdit(frm); edtLoyal.Left = 260; edtLoyal.Top = Y; edtLoyal.Width = 35; edtLoyal.Text = "0"
 local btnGenHero = createButton(frm); btnGenHero.Left = 310; btnGenHero.Top = Y - 2; btnGenHero.Width = 190; btnGenHero.Height = 26
 btnGenHero.Caption = "生成 Hero"
 local function boostList(heroData, baseOff, maxOff, boost)
