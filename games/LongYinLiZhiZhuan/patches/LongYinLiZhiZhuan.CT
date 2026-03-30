@@ -3610,6 +3610,16 @@ if not wuxueEvent then
   deAlloc(iter2)
   if not genRVA then error("GenerateRandomEvent not found") end
 
+  -- Clear event cooldowns so the event can spawn again
+  local saveRecord = readQword(wd + 0x78)
+  local origSRCount = saveRecord and readInteger(saveRecord + 0x18) or 0
+  if saveRecord and origSRCount > 0 then
+    writeInteger(saveRecord + 0x18, 0)
+  end
+  -- Also reset lastRandomWorldEventDay
+  local origLastDay = readFloat(wd + 0x70)
+  writeFloat(wd + 0x70, 0)
+
   -- Force GenerateRandomEvent to pick 武学奇才 (template index 6)
   -- by temporarily replacing bigMapRandomEventID list with just [6]
   local classFromName2 = getAddress("GameAssembly.il2cpp_class_from_name")
@@ -3633,32 +3643,48 @@ if not wuxueEvent then
   writeInteger(bmItems + 0x20, 6)
   writeInteger(bmIDs + 0x18, 1)
 
-  -- Call GenerateRandomEvent
-  writeInteger(cb + 0x10, 0)
-  writeInteger(cb + 0x14, 0)
-  writeFloat(cb + 0x18, 0)
-  writeQword(cb + 0x68, base + genRVA)
-  writeInteger(cb + 0x04, 0)
-  writeInteger(cb, 4)
-  local elapsed = 0
-  while elapsed < 3000 do
-    if readInteger(cb + 0x04) ~= 0 then break end
-    sleep(16); elapsed = elapsed + 16
+  -- Try multiple times with cooldown resets
+  local attempts = 3
+  for att = 1, attempts do
+    -- Call GenerateRandomEvent
+    writeInteger(cb + 0x10, 0)
+    writeInteger(cb + 0x14, 0)
+    writeFloat(cb + 0x18, 0)
+    writeQword(cb + 0x68, base + genRVA)
+    writeInteger(cb + 0x04, 0)
+    writeInteger(cb, 4)
+    local elapsed = 0
+    while elapsed < 3000 do
+      if readInteger(cb + 0x04) ~= 0 then break end
+      sleep(16); elapsed = elapsed + 16
+    end
+    local cmdStatus = readInteger(cb + 0x04)
+
+    -- Check if event was created
+    we = readQword(wd + 0x80)
+    local newCount = readInteger(we + 0x18)
+    print(string.format("[Event] attempt %d: cmd=%d old=%d new=%d", att, cmdStatus, n, newCount))
+    if newCount > n then
+      it = readQword(we + 0x10)
+      wuxueEvent = readQword(it + 0x20 + (newCount - 1) * 8)
+      print("[Event] 武学奇才 created!")
+      break
+    end
+    -- Reset n for next attempt
+    n = newCount
   end
 
   -- Restore original list
   writeInteger(bmItems + 0x20, origFirst)
   writeInteger(bmIDs + 0x18, origCount)
 
-  -- Find the newly created event
-  we = readQword(wd + 0x80)
-  local newCount = readInteger(we + 0x18)
-  if newCount > n then
-    it = readQword(we + 0x10)
-    wuxueEvent = readQword(it + 0x20 + (newCount - 1) * 8)
-    print("[Event] 武学奇才 created directly from template")
+  -- Restore cooldowns
+  if saveRecord and origSRCount > 0 then
+    writeInteger(saveRecord + 0x18, origSRCount)
   end
-  if not wuxueEvent then error("Failed to create event. Try again.") end
+  writeFloat(wd + 0x70, origLastDay)
+
+  if not wuxueEvent then error("Failed to create event after " .. attempts .. " attempts.") end
 end
 
 local curDiff = readFloat(wuxueEvent + 0x64)
