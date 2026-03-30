@@ -1349,7 +1349,7 @@ local horseDB = {
   {36,"斑豹马 spd=80 G4"},{35,"拳毛驹 spd=75 G4"},{33,"白蹄乌 spd=70 G4"},
 }
 local matDB = {
-  {0,"Wood"},{1,"Ore"},{2,"Medicine"},{3,"Food Ingredient"},{4,"Poison"},
+  {0,"Wood 木材"},{1,"Ore 矿石"},{2,"Medicine 药材"},{3,"Food Ingredient 食材"},{4,"Poison 毒物"},
 }
 
 -- ============================================================
@@ -2066,13 +2066,13 @@ end
 -- EQUIPMENT / TREASURE TABLES (must be before discover() which resolves genRVA)
 -- ============================================================
 local equipDBs = {
-  {name="Weapon",     off=0xF0,  genMethod="GenerateWeapon", genParams=4},
-  {name="Armor",      off=0xF8,  genMethod="GenerateArmor", genParams=4},
-  {name="Helmet",     off=0x100, genMethod="GenerateHelmet", genParams=4},
-  {name="Shoes",      off=0x108, genMethod="GenerateShoes", genParams=4},
-  {name="Accessory",  off=nil,   genMethod="GenerateDecoration", genParams=4,
+  {name="Weapon 武器",     off=0xF0,  genMethod="GenerateWeapon", genParams=4},
+  {name="Armor 盔甲",      off=0xF8,  genMethod="GenerateArmor", genParams=4},
+  {name="Helmet 头盔",     off=0x100, genMethod="GenerateHelmet", genParams=4},
+  {name="Shoes 鞋",        off=0x108, genMethod="GenerateShoes", genParams=4},
+  {name="Accessory 饰品",  off=nil,   genMethod="GenerateDecoration", genParams=4,
    staticItems={"香囊 Sachet","羽扇 Fan","扳指 Ring","玉佩 Pendant","腰带 Belt","面具 Mask"}},
-  {name="HorseArmor", off=nil,  genMethod="GenerateHorseArmorData", genParams=2,
+  {name="HorseArmor 马甲", off=nil,  genMethod="GenerateHorseArmorData", genParams=2,
    staticItems={"鞍具 Saddle"}},
 }
 local TREASURE_GEN_RVA = nil  -- resolved at runtime in discover()
@@ -2520,8 +2520,9 @@ local function addMaterial(subType, itemLv, rareLv)
   return true, itemName
 end
 
-local function addMedFood(dbIndex, dbOffset)
+local function addMedFood(dbIndex, dbOffset, bossLv)
   if not S.ready or not S.cmdBuf then return false, "请先连接游戏 [Connect first]" end
+  bossLv = bossLv or 5
   local genRVA = (dbOffset == 0x110) and RVA.genMedById or RVA.genFoodById
   if not genRVA then return false, "Generate method not resolved" end
 
@@ -2529,7 +2530,7 @@ local function addMedFood(dbIndex, dbOffset)
   -- cmd=4: rcx=GC, edx=[+0x10]=id, r8d=[+0x14]=bossLv, call [+0x68]
   writeInteger(S.cmdBuf + 0x10, dbIndex)
   writeInteger(S.cmdBuf + 0x14, 0)
-  writeFloat(S.cmdBuf + 0x18, 5.0)  -- bossLv via xmm2
+  writeFloat(S.cmdBuf + 0x18, bossLv * 1.0)  -- bossLv via xmm2
   writeQword(S.cmdBuf + 0x68, S.base + genRVA)
   writeInteger(S.cmdBuf + 0x04, 0)
   writeInteger(S.cmdBuf, 4)
@@ -2658,13 +2659,14 @@ end
 -- EQUIPMENT / TREASURE GENERATOR
 -- ============================================================
 
-local function addTreasure(typeIdx, rareLv, timeout)
+local function addTreasure(typeIdx, rareLv, bossLv, timeout)
   if not S.ready or not S.cmdBuf then return false, "请先连接游戏 [Connect first]" end
   timeout = timeout or 3000
-  -- edx=typeIdx, r8d=rareLv (same swap pattern as GenerateWeapon)
+  bossLv = bossLv or 5
+  -- edx=typeIdx, r8d=rareLv, xmm3=bossLv (same pattern as GenerateWeapon)
   writeInteger(S.cmdBuf + 0x10, typeIdx)
   writeInteger(S.cmdBuf + 0x14, rareLv)
-  writeFloat(S.cmdBuf + 0x18, 1.0)
+  writeFloat(S.cmdBuf + 0x18, bossLv * 1.0)
   writeQword(S.cmdBuf + 0x68, S.base + TREASURE_GEN_RVA)
   writeInteger(S.cmdBuf + 0x04, 0)
   writeInteger(S.cmdBuf, 4)
@@ -2887,14 +2889,14 @@ btnConn.OnClick = function()
 end
 Y = Y + 38
 
-lbl = createLabel(frm); lbl.Left = 10; lbl.Top = Y; lbl.Caption = "Martial Arts Book (G5)"
+lbl = createLabel(frm); lbl.Left = 10; lbl.Top = Y; lbl.Caption = "Martial Arts Book 武学秘籍"
 lbl.Font.Size = 9; lbl.Font.Style = "fsBold"; Y = Y + 20
 local cmbSk = createComboBox(frm); cmbSk.Left = 10; cmbSk.Top = Y; cmbSk.Width = 320
 for _, s in ipairs(skillDB) do cmbSk.Items.add(string.format("[%d] %s", s[1], s[2])) end
 cmbSk.ItemIndex = 0
 local edtID = createEdit(frm); edtID.Left = 340; edtID.Top = Y; edtID.Width = 50; edtID.Text = ""
 local lblIDHint = createLabel(frm); lblIDHint.Left = 342; lblIDHint.Top = Y - 14; lblIDHint.Caption = "ID 0-999"; lblIDHint.Font.Size = 7; lblIDHint.Font.Color = 0x808080
-local btnBook = createButton(frm); btnBook.Left = 400; btnBook.Top = Y - 2; btnBook.Width = 100; btnBook.Height = 24
+local btnBook = createButton(frm); btnBook.Left = 410; btnBook.Top = Y - 2; btnBook.Width = 90; btnBook.Height = 24
 btnBook.Caption = "Add Book"
 btnBook.OnClick = safeClick(function()
   if not S.ready then setStatus("请先连接游戏! [Connect first!]", 0x0000FF); return end
@@ -2906,16 +2908,16 @@ btnBook.OnClick = safeClick(function()
 end)
 Y = Y + 32
 
-lbl = createLabel(frm); lbl.Left = 10; lbl.Top = Y; lbl.Caption = "Material"
+lbl = createLabel(frm); lbl.Left = 10; lbl.Top = Y; lbl.Caption = "Material 材料"
 lbl.Font.Size = 9; lbl.Font.Style = "fsBold"; Y = Y + 20
 local cmbMT = createComboBox(frm); cmbMT.Left = 10; cmbMT.Top = Y; cmbMT.Width = 140
 for _, m in ipairs(matDB) do cmbMT.Items.add(m[1] .. "-" .. m[2]) end; cmbMT.ItemIndex = 1
 local lblML = createLabel(frm); lblML.Left = 160; lblML.Top = Y + 3; lblML.Caption = "Lv:"
 local cmbML = createComboBox(frm); cmbML.Left = 180; cmbML.Top = Y; cmbML.Width = 35
 for i = 0, 5 do cmbML.Items.add(tostring(i)) end; cmbML.ItemIndex = 5
-local lblMB = createLabel(frm); lblMB.Left = 220; lblMB.Top = Y + 3; lblMB.Caption = "BossLv:"
-local edtMB = createEdit(frm); edtMB.Left = 270; edtMB.Top = Y; edtMB.Width = 30; edtMB.Text = "5"
-local btnMat = createButton(frm); btnMat.Left = 400; btnMat.Top = Y - 2; btnMat.Width = 100; btnMat.Height = 24
+local lblMB = createLabel(frm); lblMB.Left = 280; lblMB.Top = Y + 3; lblMB.Caption = "Rare:"
+local edtMB = createEdit(frm); edtMB.Left = 325; edtMB.Top = Y; edtMB.Width = 30; edtMB.Text = "5"
+local btnMat = createButton(frm); btnMat.Left = 410; btnMat.Top = Y - 2; btnMat.Width = 90; btnMat.Height = 24
 btnMat.Caption = "Add Material"
 btnMat.OnClick = safeClick(function()
   if not S.ready then setStatus("请先连接游戏! [Connect first!]", 0x0000FF); return end
@@ -2931,9 +2933,9 @@ lbl = createLabel(frm); lbl.Left = 10; lbl.Top = Y; lbl.Caption = "Horse 马匹"
 lbl.Font.Size = 9; lbl.Font.Style = "fsBold"; Y = Y + 20
 local cmbHr = createComboBox(frm); cmbHr.Left = 10; cmbHr.Top = Y; cmbHr.Width = 240
 for _, h in ipairs(horseDB) do cmbHr.Items.add(string.format("[%d] %s", h[1], h[2])) end; cmbHr.ItemIndex = 0
-local lblHrB = createLabel(frm); lblHrB.Left = 255; lblHrB.Top = Y + 3; lblHrB.Caption = "BossLv:"
-local edtHrB = createEdit(frm); edtHrB.Left = 300; edtHrB.Top = Y; edtHrB.Width = 30; edtHrB.Text = "5"
-local btnHr = createButton(frm); btnHr.Left = 400; btnHr.Top = Y - 2; btnHr.Width = 100; btnHr.Height = 24
+local lblHrB = createLabel(frm); lblHrB.Left = 280; lblHrB.Top = Y + 3; lblHrB.Caption = "Rare:"
+local edtHrB = createEdit(frm); edtHrB.Left = 325; edtHrB.Top = Y; edtHrB.Width = 30; edtHrB.Text = "5"
+local btnHr = createButton(frm); btnHr.Left = 410; btnHr.Top = Y - 2; btnHr.Width = 90; btnHr.Height = 24
 btnHr.Caption = "Add Horse"
 btnHr.OnClick = safeClick(function()
   if not S.ready then setStatus("请先连接游戏! [Connect first!]", 0x0000FF); return end
@@ -2945,11 +2947,11 @@ btnHr.OnClick = safeClick(function()
 end)
 Y = Y + 32
 
-lbl = createLabel(frm); lbl.Left = 10; lbl.Top = Y; lbl.Caption = "Equipment (Weapon/Armor/Helmet/Shoes)"
+lbl = createLabel(frm); lbl.Left = 10; lbl.Top = Y; lbl.Caption = "Equipment 装备 (武器/盔甲/头盔/鞋)"
 lbl.Font.Size = 9; lbl.Font.Style = "fsBold"; Y = Y + 20
-local cmbEqType = createComboBox(frm); cmbEqType.Left = 10; cmbEqType.Top = Y; cmbEqType.Width = 80
+local cmbEqType = createComboBox(frm); cmbEqType.Left = 10; cmbEqType.Top = Y; cmbEqType.Width = 110
 for _, e in ipairs(equipDBs) do cmbEqType.Items.add(e.name) end; cmbEqType.ItemIndex = 0
-local cmbEqItem = createComboBox(frm); cmbEqItem.Left = 100; cmbEqItem.Top = Y; cmbEqItem.Width = 160
+local cmbEqItem = createComboBox(frm); cmbEqItem.Left = 125; cmbEqItem.Top = Y; cmbEqItem.Width = 140
 local lblEqLv = createLabel(frm); lblEqLv.Left = 270; lblEqLv.Top = Y + 3; lblEqLv.Caption = "Lv:"
 local cmbEqLv = createComboBox(frm); cmbEqLv.Left = 290; cmbEqLv.Top = Y; cmbEqLv.Width = 55
 cmbEqLv.Items.add("0劣质"); cmbEqLv.Items.add("1普通"); cmbEqLv.Items.add("2优质")
@@ -3016,56 +3018,65 @@ btnEq.OnClick = safeClick(function()
 end)
 Y = Y + 32
 
-lbl = createLabel(frm); lbl.Left = 10; lbl.Top = Y; lbl.Caption = "Treasure"
+lbl = createLabel(frm); lbl.Left = 10; lbl.Top = Y; lbl.Caption = "Treasure 珍宝"
 lbl.Font.Size = 9; lbl.Font.Style = "fsBold"; Y = Y + 20
-local cmbTrType = createComboBox(frm); cmbTrType.Left = 10; cmbTrType.Top = Y; cmbTrType.Width = 200
+local cmbTrType = createComboBox(frm); cmbTrType.Left = 10; cmbTrType.Top = Y; cmbTrType.Width = 160
 for i, name in ipairs(treasureTypes) do cmbTrType.Items.add(string.format("[%d] %s", i-1, name)) end
 cmbTrType.ItemIndex = 0
-local lblTrR = createLabel(frm); lblTrR.Left = 220; lblTrR.Top = Y + 3; lblTrR.Caption = "Rarity:"
-local cmbTrRare = createComboBox(frm); cmbTrRare.Left = 260; cmbTrRare.Top = Y; cmbTrRare.Width = 90
+local lblTrR = createLabel(frm); lblTrR.Left = 175; lblTrR.Top = Y + 3; lblTrR.Caption = "Lv:"
+local cmbTrRare = createComboBox(frm); cmbTrRare.Left = 195; cmbTrRare.Top = Y; cmbTrRare.Width = 80
 cmbTrRare.Items.add("0 White"); cmbTrRare.Items.add("1 Normal"); cmbTrRare.Items.add("2 Good")
 cmbTrRare.Items.add("3 Excellent"); cmbTrRare.Items.add("4 Perfect"); cmbTrRare.Items.add("5 Legendary")
 cmbTrRare.ItemIndex = 5
-local btnTr = createButton(frm); btnTr.Left = 360; btnTr.Top = Y - 2; btnTr.Width = 100; btnTr.Height = 24
+local lblTrB = createLabel(frm); lblTrB.Left = 280; lblTrB.Top = Y + 3; lblTrB.Caption = "Rare:"
+local edtTrB = createEdit(frm); edtTrB.Left = 325; edtTrB.Top = Y; edtTrB.Width = 30; edtTrB.Text = "5"
+local btnTr = createButton(frm); btnTr.Left = 410; btnTr.Top = Y - 2; btnTr.Width = 90; btnTr.Height = 24
 btnTr.Caption = "Add Treasure"
 btnTr.OnClick = safeClick(function()
   if not S.ready then setStatus("请先连接游戏! [Connect first!]", 0x0000FF); return end
   local typeIdx = cmbTrType.ItemIndex
   local rareLv = cmbTrRare.ItemIndex
+  local bossLv = tonumber(edtTrB.Text) or 5
   local trText = cmbTrType.Items[typeIdx]
-  log(string.format("BTN AddTreasure: type=%d '%s' rare=%d", typeIdx, trText or "?", rareLv))
-  setStatus(string.format("Gen Treasure type=%d rare=%d", typeIdx, rareLv), 0x008080)
-  local ok, msg = addTreasure(typeIdx, rareLv)
+  log(string.format("BTN AddTreasure: type=%d '%s' rare=%d boss=%d", typeIdx, trText or "?", rareLv, bossLv))
+  setStatus(string.format("Gen Treasure type=%d rare=%d boss=%d", typeIdx, rareLv, bossLv), 0x008080)
+  local ok, msg = addTreasure(typeIdx, rareLv, bossLv)
   setStatus(ok and ("Added: " .. msg) or ("ERR: " .. msg), ok and 0x008000 or 0x0000FF)
 end)
 Y = Y + 32
 
-lbl = createLabel(frm); lbl.Left = 10; lbl.Top = Y; lbl.Caption = "Medicine (Main Thread)"
+lbl = createLabel(frm); lbl.Left = 10; lbl.Top = Y; lbl.Caption = "Medicine 药品"
 lbl.Font.Size = 9; lbl.Font.Style = "fsBold"; Y = Y + 20
-local cmbMed = createComboBox(frm); cmbMed.Left = 10; cmbMed.Top = Y; cmbMed.Width = 320
+local cmbMed = createComboBox(frm); cmbMed.Left = 10; cmbMed.Top = Y; cmbMed.Width = 270
 for _, m in ipairs(medDB) do cmbMed.Items.add(string.format("[%d] %s", m[1], m[2])) end; cmbMed.ItemIndex = 0
-local btnMed = createButton(frm); btnMed.Left = 400; btnMed.Top = Y - 2; btnMed.Width = 100; btnMed.Height = 24
+local lblMdB = createLabel(frm); lblMdB.Left = 285; lblMdB.Top = Y + 3; lblMdB.Caption = "Rare:"
+local edtMdB = createEdit(frm); edtMdB.Left = 330; edtMdB.Top = Y; edtMdB.Width = 30; edtMdB.Text = "5"
+local btnMed = createButton(frm); btnMed.Left = 410; btnMed.Top = Y - 2; btnMed.Width = 90; btnMed.Height = 24
 btnMed.Caption = "Add Medicine"
 btnMed.OnClick = safeClick(function()
   if not S.ready then setStatus("请先连接游戏! [Connect first!]", 0x0000FF); return end
-  log(string.format("BTN AddMed: dbIdx=%d", medDB[cmbMed.ItemIndex + 1][1]))
+  local bossLv = tonumber(edtMdB.Text) or 5
+  log(string.format("BTN AddMed: dbIdx=%d boss=%d", medDB[cmbMed.ItemIndex + 1][1], bossLv))
   setStatus("Adding...", 0x008080)
-  local ok, msg = addMedFood(medDB[cmbMed.ItemIndex + 1][1], 0x110)
+  local ok, msg = addMedFood(medDB[cmbMed.ItemIndex + 1][1], 0x110, bossLv)
   setStatus(ok and ("Added: " .. msg) or ("ERR: " .. msg), ok and 0x008000 or 0x0000FF)
 end)
 Y = Y + 32
 
-lbl = createLabel(frm); lbl.Left = 10; lbl.Top = Y; lbl.Caption = "Food (Main Thread)"
+lbl = createLabel(frm); lbl.Left = 10; lbl.Top = Y; lbl.Caption = "Food 食物"
 lbl.Font.Size = 9; lbl.Font.Style = "fsBold"; Y = Y + 20
-local cmbFd = createComboBox(frm); cmbFd.Left = 10; cmbFd.Top = Y; cmbFd.Width = 320
+local cmbFd = createComboBox(frm); cmbFd.Left = 10; cmbFd.Top = Y; cmbFd.Width = 270
 for _, f in ipairs(foodDB) do cmbFd.Items.add(string.format("[%d] %s", f[1], f[2])) end; cmbFd.ItemIndex = 0
-local btnFd = createButton(frm); btnFd.Left = 400; btnFd.Top = Y - 2; btnFd.Width = 100; btnFd.Height = 24
+local lblFdB = createLabel(frm); lblFdB.Left = 285; lblFdB.Top = Y + 3; lblFdB.Caption = "Rare:"
+local edtFdB = createEdit(frm); edtFdB.Left = 330; edtFdB.Top = Y; edtFdB.Width = 30; edtFdB.Text = "5"
+local btnFd = createButton(frm); btnFd.Left = 410; btnFd.Top = Y - 2; btnFd.Width = 90; btnFd.Height = 24
 btnFd.Caption = "Add Food"
 btnFd.OnClick = safeClick(function()
   if not S.ready then setStatus("请先连接游戏! [Connect first!]", 0x0000FF); return end
-  log(string.format("BTN AddFood: dbIdx=%d", foodDB[cmbFd.ItemIndex + 1][1]))
+  local bossLv = tonumber(edtFdB.Text) or 5
+  log(string.format("BTN AddFood: dbIdx=%d boss=%d", foodDB[cmbFd.ItemIndex + 1][1], bossLv))
   setStatus("Adding...", 0x008080)
-  local ok, msg = addMedFood(foodDB[cmbFd.ItemIndex + 1][1], 0x118)
+  local ok, msg = addMedFood(foodDB[cmbFd.ItemIndex + 1][1], 0x118, bossLv)
   setStatus(ok and ("Added: " .. msg) or ("ERR: " .. msg), ok and 0x008000 or 0x0000FF)
 end)
 
@@ -3092,7 +3103,7 @@ local lblAge = createLabel(frm); lblAge.Left = 85; lblAge.Top = Y + 3; lblAge.Ca
 local edtAge = createEdit(frm); edtAge.Left = 110; edtAge.Top = Y; edtAge.Width = 35; edtAge.Text = "0"
 local lblLoyal = createLabel(frm); lblLoyal.Left = 150; lblLoyal.Top = Y + 3; lblLoyal.Caption = "Loyal:"
 local edtLoyal = createEdit(frm); edtLoyal.Left = 185; edtLoyal.Top = Y; edtLoyal.Width = 35; edtLoyal.Text = "0"
-local btnGenHero = createButton(frm); btnGenHero.Left = 310; btnGenHero.Top = Y - 2; btnGenHero.Width = 190; btnGenHero.Height = 24
+local btnGenHero = createButton(frm); btnGenHero.Left = 310; btnGenHero.Top = Y - 2; btnGenHero.Width = 190; btnGenHero.Height = 26
 btnGenHero.Caption = "Generate Hero"
 local function boostList(heroData, baseOff, maxOff, boost)
   local baseList = readQword(heroData + baseOff)
