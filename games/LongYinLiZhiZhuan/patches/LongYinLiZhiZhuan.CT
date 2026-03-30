@@ -2192,7 +2192,7 @@ local function discover()
     RVA.genMedById = resolveRVA(gcClass, "GenerateMedData", 2)
     RVA.genFoodById = resolveRVA(gcClass, "GenerateFoodData", 2)
     RVA.genHorseById = resolveRVA(gcClass, "GenerateHorseData", 2)
-    RVA.genMaterial = resolveRVA(gcClass, "GenerateMaterial", 3)
+    RVA.genMaterial = resolveRVA(gcClass, "GenerateMaterial", 2)
     RVA.genHorseArmor = resolveRVA(gcClass, "GenerateHorseArmorData", 2)
   end
   S.setBookAddr = S.base + (RVA.setBook or 0)
@@ -2467,10 +2467,33 @@ local function addBook(skillID, rareLv)
 end
 
 local function addMaterial(subType, itemLv, rareLv)
-  if not S.ready then return false, "请先连接游戏 [Connect first]" end
-  local ok, ptr = mainThreadCreateAndAdd(5, S.base + RVA.setMat, subType, itemLv, rareLv)
-  if not ok then return false, ptr end
-  return true, getItemName(ptr)
+  if not S.ready or not S.cmdBuf then return false, "请先连接游戏 [Connect first]" end
+  if not RVA.genMaterial then
+    -- Fallback to old method if GenerateMaterial not resolved
+    local ok, ptr = mainThreadCreateAndAdd(5, S.base + RVA.setMat, subType, itemLv, rareLv)
+    if not ok then return false, ptr end
+    return true, getItemName(ptr)
+  end
+  -- Use GenerateMaterial(materialType, itemLv) via cmd=4
+  -- cmd=4: rcx=GC, edx=[+0x10]=materialType, r8d=[+0x14]=itemLv
+  writeInteger(S.cmdBuf + 0x10, subType)
+  writeInteger(S.cmdBuf + 0x14, itemLv)
+  writeFloat(S.cmdBuf + 0x18, 0)
+  writeQword(S.cmdBuf + 0x68, S.base + RVA.genMaterial)
+  writeInteger(S.cmdBuf + 0x04, 0)
+  writeInteger(S.cmdBuf, 4)
+  local elapsed = 0
+  while elapsed < 3000 do
+    if readInteger(S.cmdBuf + 0x04) ~= 0 then break end
+    sleep(16); elapsed = elapsed + 16
+  end
+  if readInteger(S.cmdBuf + 0x04) ~= 1 then return false, "Generation failed" end
+  local newItem = readQword(S.cmdBuf + 0x08)
+  if not newItem or newItem == 0 then return false, "Returned null" end
+  local itemName = getItemName(newItem)
+  local ok, result = mainThreadGetItem(newItem)
+  if not ok then return false, result end
+  return true, itemName
 end
 
 local function addMedFood(dbIndex, dbOffset)
