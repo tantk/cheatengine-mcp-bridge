@@ -1686,6 +1686,7 @@ label(genHeroDone)
 label(genHeroError)
 label(doSimpleCall)
 label(doThreeIntCall)
+label(doPtrCall)
 label(skipSetup)
 label(cmdDone)
 label(cmdError)
@@ -1719,6 +1720,8 @@ hookCode:
   je doSimpleCall
   cmp eax,7
   je doThreeIntCall
+  cmp eax,8
+  je doPtrCall
   mov dword ptr [rbx+04],2
   mov dword ptr [rbx],0
   jmp noCmd
@@ -1929,6 +1932,23 @@ doThreeIntCall:
   mov [rbx+08],rax
   jmp cmdDone
 
+doPtrCall:
+  push rcx
+  push rdx
+  push r8
+  push r9
+  push r10
+  push r11
+  sub rsp,58
+  mov rcx,[rbx+88]
+  test rcx,rcx
+  jz cmdError
+  mov rdx,[rbx+08]
+  mov rax,[rbx+68]
+  call rax
+  mov [rbx+08],rax
+  jmp cmdDone
+
 doSimpleCall:
   push rcx
   push rdx
@@ -1938,6 +1958,7 @@ doSimpleCall:
   push r11
   sub rsp,58
   mov rcx,[rbx+08]
+  xor edx,edx
   mov rax,[rbx+68]
   call rax
   mov [rbx+08],rax
@@ -2599,7 +2620,7 @@ local function generateHero(forceID, heroForceLv, sexLimit, timeout)
 
   -- cmd=5: GenerateHeroData(9) + ManagePlayerRecruitHero
   writeInteger(cb + 0x10, forceID or 0)
-  writeInteger(cb + 0x14, heroForceLv or 5)
+  writeFloat(cb + 0x14, (heroForceLv or 5) * 1.0)
   writeInteger(cb + 0x18, sexLimit or 0)
   writeQword(cb + 0x68, base + RVA.genHeroData9)
   writeQword(cb + 0x70, base + RVA.recruitHero)
@@ -2835,6 +2856,60 @@ local function addEquipment(dbOff, dbIndex, desiredLv, desiredRare)
   local ok, result = mainThreadGetItem(ni)
   if not ok then return false, result end
   return true, getItemName(ni)
+end
+
+-- EVENT SPAWNER (cmd=6 for Clone, cmd=8 for CreateAreaMapRandomEvent)
+local function spawnEvent(templateIdx, timeout)
+  if not S.ready or not S.cmdBuf then return false, "Connect first" end
+  timeout = timeout or 5000
+  local cb = S.cmdBuf
+
+  -- Find WorldEventController instance + WorldEventDataBase
+  local c = _il2cppCache
+  if not c then return false, "il2cpp not ready" end
+  local wecClass = c.findClass("WorldEventController")
+  if not wecClass then return false, "WEC class not found" end
+  local sf = readQword(wecClass + 0xB8)
+  if not sf or sf == 0 then return false, "WEC static=0" end
+  local wecInst = readQword(sf + 0x8)
+  if not wecInst or wecInst == 0 then return false, "WEC instance=0" end
+  -- WorldEventDataBase: **(class+0xB8) + 0x18
+  local sfInst = readQword(sf)
+  if not sfInst or sfInst == 0 then return false, "WEC sfInst=0" end
+  local dbList = readQword(sfInst + 0x18)
+  if not dbList or dbList == 0 then return false, "DB list=0" end
+  local dbCount = readInteger(dbList + 0x18)
+  if templateIdx >= dbCount then return false, "Index out of range" end
+  local items = readQword(dbList + 0x10)
+  local template = readQword(items + 0x20 + templateIdx * 8)
+  if not template or template == 0 then return false, "Template null" end
+
+  -- Read event name for display
+  local nameObj = readQword(template + 0x10)
+  local evtName = ""
+  if nameObj and nameObj ~= 0 then
+    local nl = readInteger(nameObj + 0x10)
+    if nl and nl > 0 and nl < 30 then evtName = readString(nameObj + 0x14, nl*2, true) or "" end
+  end
+
+  -- WorldEventController.CreateWorldEvent(wec, worldEventDataBase) 2-param overload
+  -- RVA 0xB90370 — handles area selection, cloning, difficulty internally
+  -- cmd=6: rcx=[+0x08], call [+0x68] — but we need rcx=WEC and rdx=template
+  -- Use cmd=8 instead: rcx=[+0x88], rdx=[+0x08], call [+0x68]
+  writeQword(cb + 0x88, wecInst)
+  writeQword(cb + 0x08, template)
+  writeQword(cb + 0x68, S.base + 0xB90370)
+  writeInteger(cb + 0x04, 0)
+  writeInteger(cb, 8)
+  local elapsed = 0
+  while elapsed < timeout do
+    local st = readInteger(cb + 0x04)
+    if st and st ~= 0 then break end
+    sleep(16); elapsed = elapsed + 16
+  end
+  local finalStatus = readInteger(cb + 0x04)
+  if not finalStatus or finalStatus ~= 1 then return false, "CreateWorldEvent failed (status=" .. tostring(finalStatus) .. ")" end
+  return true, evtName
 end
 
 -- ============================================================
@@ -3216,6 +3291,33 @@ btnFog.OnClick = safeClick(function()
 end)
 
 Y = Y + 32
+
+lbl = createLabel(frm); lbl.Left = 10; lbl.Top = Y; lbl.Caption = "World Event 世界事件"
+lbl.Font.Size = 9; lbl.Font.Style = "fsBold"; Y = Y + 20
+local cmbEvt = createComboBox(frm); cmbEvt.Left = 10; cmbEvt.Top = Y; cmbEvt.Width = 270
+cmbEvt.Items.add("[13] 异草奇花 Rare Herb")
+cmbEvt.Items.add("[14] 仙木灵果 Spirit Fruit")
+cmbEvt.Items.add("[15] 失落宝藏 Lost Treasure")
+cmbEvt.Items.add("[16] 神兵现世 Divine Weapon")
+cmbEvt.Items.add("[17] 失传秘籍 Lost Manual")
+cmbEvt.Items.add("[18] 千里名驹 Famous Horse")
+cmbEvt.Items.add("[19] 武学奇才 Martial Prodigy")
+cmbEvt.Items.add("[20] 世外高人 Hidden Master")
+cmbEvt.Items.add("[21] 皇家宝库 Royal Treasury")
+cmbEvt.Items.add("[22] 神秘石碑 Mysterious Stele")
+cmbEvt.ItemIndex = 6
+local evtIdxMap = {13,14,15,16,17,18,19,20,21,22}
+local btnEvt = createButton(frm); btnEvt.Left = 410; btnEvt.Top = Y - 2; btnEvt.Width = 90; btnEvt.Height = 24
+btnEvt.Caption = "Spawn 生成"
+btnEvt.OnClick = safeClick(function()
+  if not S.ready then setStatus("Connect first!", 0x0000FF); return end
+  local idx = evtIdxMap[cmbEvt.ItemIndex + 1]
+  setStatus(string.format("Spawning event %d...", idx), 0x008080)
+  local ok, msg = spawnEvent(idx)
+  setStatus(ok and ("Spawned: " .. msg) or ("ERR: " .. msg), ok and 0x008000 or 0x0000FF)
+end)
+Y = Y + 32
+
 lblStatus.Top = Y
 frm.Height = Y + 60
 frm.Show()
