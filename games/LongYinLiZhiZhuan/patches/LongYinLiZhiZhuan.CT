@@ -2962,15 +2962,18 @@ local function spawnEvent(templateIdx, difficulty, timeout)
   local finalStatus = readInteger(cb + 0x04)
   if not finalStatus or finalStatus ~= 1 then return false, "CreateWorldEvent failed (status=" .. tostring(finalStatus) .. ")" end
 
-  -- Step 2: Override difficulty on the new event BEFORE UI renders next frame
-  if difficulty and difficulty > 0 then
-    eventList = readQword(worldData + 0x80)
-    local countAfter = eventList ~= 0 and readInteger(eventList + 0x18) or 0
-    if countAfter > countBefore then
-      local evtItems = readQword(eventList + 0x10)
-      local newEvt = readQword(evtItems + 0x20 + (countAfter - 1) * 8)
-      if newEvt and newEvt ~= 0 then
-        writeFloat(newEvt + 0x64, difficulty * 1.0)
+  -- Step 2: Set display flag + difficulty on the new event BEFORE UI renders
+  eventList = readQword(worldData + 0x80)
+  local countAfter = eventList ~= 0 and readInteger(eventList + 0x18) or 0
+  if countAfter > countBefore then
+    local evtItems = readQword(eventList + 0x10)
+    local newEvt = readQword(evtItems + 0x20 + (countAfter - 1) * 8)
+    if newEvt and newEvt ~= 0 then
+      writeBytes(newEvt + 0x5C, 1)
+      if difficulty and difficulty > 0 then
+        -- Cap display at 11 (game UI max), but actual difficulty stays higher
+        local displayDiff = math.min(difficulty, 11)
+        writeFloat(newEvt + 0x64, displayDiff * 1.0)
       end
     end
   end
