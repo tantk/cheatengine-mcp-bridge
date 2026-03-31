@@ -2892,7 +2892,7 @@ local function addEquipment(dbOff, dbIndex, desiredLv, desiredRare)
 end
 
 -- EVENT SPAWNER (cmd=8 for CreateWorldEvent)
-local function spawnEvent(templateIdx, timeout)
+local function spawnEvent(templateIdx, difficulty, timeout)
   if not S.ready or not S.cmdBuf then return false, "Connect first" end
   timeout = timeout or 5000
   local cb = S.cmdBuf
@@ -2921,9 +2921,7 @@ local function spawnEvent(templateIdx, timeout)
     if nl and nl > 0 and nl < 30 then evtName = readString(nameObj + 0x14, nl*2, true) or "" end
   end
 
-  -- Call CreateWorldEvent(wec, template) via il2cpp_runtime_invoke
-  -- This 2-param overload handles everything: clone, area selection, map icon, registration
-  -- Resolve MethodInfo if not cached
+  -- Step 1: Call 2-param CreateWorldEvent to handle area selection + clone + registration
   if not S.createWorldEventMI then
     local getMeth = getAddress("GameAssembly.il2cpp_class_get_method_from_name")
     local wecKlass = readQword(wecInst)
@@ -2941,13 +2939,13 @@ local function spawnEvent(templateIdx, timeout)
   local riAddr = getAddress("GameAssembly.il2cpp_runtime_invoke")
   if not riAddr or riAddr == 0 then return false, "runtime_invoke not found" end
 
-  -- Force unhandled area types to 0
-  local areaType = readInteger(template + 0x48)
-  if not areaType or areaType > 2 then
-    writeInteger(template + 0x48, 0)
-  end
+  -- Count events before spawn to find the new one after
+  local gcC = _il2cpp_init()
+  local gcInst = readQword(gcC.gc.static + gcC.gc.instOff)
+  local worldData = gcInst and readQword(gcInst + 0x20) or 0
+  local eventList = worldData ~= 0 and readQword(worldData + 0x80) or 0
+  local countBefore = eventList ~= 0 and readInteger(eventList + 0x18) or 0
 
-  -- runtime_invoke(MI, wecInst, params=[template], &exc)
   writeQword(cb + 0xA0, template)
   writeQword(cb + 0x90, S.createWorldEventMI)
   writeQword(cb + 0x88, wecInst)
@@ -2961,13 +2959,22 @@ local function spawnEvent(templateIdx, timeout)
     sleep(16); elapsed = elapsed + 16
   end
 
-  -- Restore area type
-  if areaType and areaType > 2 then
-    writeInteger(template + 0x48, areaType)
-  end
-
   local finalStatus = readInteger(cb + 0x04)
   if not finalStatus or finalStatus ~= 1 then return false, "CreateWorldEvent failed (status=" .. tostring(finalStatus) .. ")" end
+
+  -- Step 2: Override difficulty on the new event BEFORE UI renders next frame
+  if difficulty and difficulty > 0 then
+    eventList = readQword(worldData + 0x80)
+    local countAfter = eventList ~= 0 and readInteger(eventList + 0x18) or 0
+    if countAfter > countBefore then
+      local evtItems = readQword(eventList + 0x10)
+      local newEvt = readQword(evtItems + 0x20 + (countAfter - 1) * 8)
+      if newEvt and newEvt ~= 0 then
+        writeFloat(newEvt + 0x64, difficulty * 1.0)
+      end
+    end
+  end
+
   return true, evtName
 end
 
@@ -3366,13 +3373,16 @@ cmbEvt.Items.add("[21] 皇家宝库 Royal Treasury")
 cmbEvt.Items.add("[22] 神秘石碑 Mysterious Stele")
 cmbEvt.ItemIndex = 6
 local evtIdxMap = {13,14,15,16,17,18,19,20,21,22}
+local lblEvtD = createLabel(frm); lblEvtD.Left = 285; lblEvtD.Top = Y + 3; lblEvtD.Caption = "Rare:"
+local edtEvtD = createEdit(frm); edtEvtD.Left = 315; edtEvtD.Top = Y; edtEvtD.Width = 30; edtEvtD.Text = "0"
 local btnEvt = createButton(frm); btnEvt.Left = 410; btnEvt.Top = Y - 2; btnEvt.Width = 90; btnEvt.Height = 24
 btnEvt.Caption = "Spawn 生成"
 btnEvt.OnClick = safeClick(function()
   if not S.ready then setStatus("Connect first!", 0x0000FF); return end
   local idx = evtIdxMap[cmbEvt.ItemIndex + 1]
-  setStatus(string.format("Spawning event %d...", idx), 0x008080)
-  local ok, msg = spawnEvent(idx)
+  local diff = tonumber(edtEvtD.Text) or 0
+  setStatus(string.format("Spawning event %d diff=%.0f...", idx, diff), 0x008080)
+  local ok, msg = spawnEvent(idx, diff)
   setStatus(ok and ("Spawned: " .. msg) or ("ERR: " .. msg), ok and 0x008000 or 0x0000FF)
 end)
 Y = Y + 32
