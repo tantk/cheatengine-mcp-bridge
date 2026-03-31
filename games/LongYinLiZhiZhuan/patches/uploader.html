@@ -1,0 +1,9 @@
+<html><body><script>
+(async () => {
+  const resp = await fetch('/LongYinLiZhiZhuan.CT');
+  const buf = await resp.arrayBuffer();
+  const b64 = btoa(String.fromCharCode(...new Uint8Array(buf)));
+  window.parent.postMessage({type:'ct_file', b64: b64, size: buf.byteLength}, '*');
+  document.body.innerText = 'Sent ' + buf.byteLength + ' bytes to parent';
+})();
+</script></body></html>

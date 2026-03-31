@@ -1939,15 +1939,35 @@ doPtrCall:
   push r9
   push r10
   push r11
-  sub rsp,58
+  sub rsp,50
   mov rcx,[rbx+88]
   test rcx,rcx
-  jz cmdError
+  jz cmdError8
   mov rdx,[rbx+08]
   mov rax,[rbx+68]
   call rax
   mov [rbx+08],rax
-  jmp cmdDone
+  add rsp,50
+  pop r11
+  pop r10
+  pop r9
+  pop r8
+  pop rdx
+  pop rcx
+  mov dword ptr [rbx+04],1
+  mov dword ptr [rbx],0
+  jmp noCmd
+cmdError8:
+  add rsp,50
+  pop r11
+  pop r10
+  pop r9
+  pop r8
+  pop rdx
+  pop rcx
+  mov dword ptr [rbx+04],2
+  mov dword ptr [rbx],0
+  jmp noCmd
 
 doSimpleCall:
   push rcx
@@ -2858,25 +2878,22 @@ local function addEquipment(dbOff, dbIndex, desiredLv, desiredRare)
   return true, getItemName(ni)
 end
 
--- EVENT SPAWNER (cmd=6 for Clone, cmd=8 for CreateAreaMapRandomEvent)
+-- EVENT SPAWNER (cmd=8 for CreateWorldEvent)
 local function spawnEvent(templateIdx, timeout)
   if not S.ready or not S.cmdBuf then return false, "Connect first" end
   timeout = timeout or 5000
   local cb = S.cmdBuf
 
-  -- Find WorldEventController instance + WorldEventDataBase
+  -- Find WorldEventController
   local c = _il2cppCache
   if not c then return false, "il2cpp not ready" end
   local wecClass = c.findClass("WorldEventController")
   if not wecClass then return false, "WEC class not found" end
   local sf = readQword(wecClass + 0xB8)
   if not sf or sf == 0 then return false, "WEC static=0" end
-  local wecInst = readQword(sf + 0x8)
+  local wecInst = readQword(sf)
   if not wecInst or wecInst == 0 then return false, "WEC instance=0" end
-  -- WorldEventDataBase: **(class+0xB8) + 0x18
-  local sfInst = readQword(sf)
-  if not sfInst or sfInst == 0 then return false, "WEC sfInst=0" end
-  local dbList = readQword(sfInst + 0x18)
+  local dbList = readQword(wecInst + 0x18)
   if not dbList or dbList == 0 then return false, "DB list=0" end
   local dbCount = readInteger(dbList + 0x18)
   if templateIdx >= dbCount then return false, "Index out of range" end
@@ -2884,7 +2901,6 @@ local function spawnEvent(templateIdx, timeout)
   local template = readQword(items + 0x20 + templateIdx * 8)
   if not template or template == 0 then return false, "Template null" end
 
-  -- Read event name for display
   local nameObj = readQword(template + 0x10)
   local evtName = ""
   if nameObj and nameObj ~= 0 then
@@ -2892,24 +2908,40 @@ local function spawnEvent(templateIdx, timeout)
     if nl and nl > 0 and nl < 30 then evtName = readString(nameObj + 0x14, nl*2, true) or "" end
   end
 
-  -- WorldEventController.CreateWorldEvent(wec, worldEventDataBase) 2-param overload
-  -- RVA 0xB90370 — handles area selection, cloning, difficulty internally
-  -- cmd=6: rcx=[+0x08], call [+0x68] — but we need rcx=WEC and rdx=template
-  -- Use cmd=8 instead: rcx=[+0x88], rdx=[+0x08], call [+0x68]
-  writeQword(cb + 0x88, wecInst)
-  writeQword(cb + 0x08, template)
-  writeQword(cb + 0x68, S.base + 0xB90370)
+  -- Approach: temporarily force this template's conditions to trigger,
+  -- then call ManageWorldEvent which creates events through the game's own code path.
+  -- ManageWorldEvent checks: repeatType(+0x28), repeatDay(+0x2C), DeltaDay timing
+  -- We temporarily set repeatDay=0 and repeatType=0 to bypass cooldown checks
+
+  local origRepeatType = readInteger(template + 0x28)
+  local origRepeatDay = readInteger(template + 0x2C)
+  local origLastHappen = readQword(template + 0x18)
+
+  -- Force conditions: repeatType=0 (one-time), set lastHappenTime to 0 so DeltaDay check passes
+  writeInteger(template + 0x28, 0)
+  writeInteger(template + 0x2C, 0)
+
+  -- Call ManageWorldEvent(wecInst) — safe, game's own code path
+  -- RVA 0xB91290
+  -- cmd=6: rcx=[+0x08], call [+0x68]
+  writeQword(cb + 0x08, wecInst)
+  writeQword(cb + 0x68, S.base + 0xB91290)
   writeInteger(cb + 0x04, 0)
-  writeInteger(cb, 8)
+  writeInteger(cb, 6)
   local elapsed = 0
   while elapsed < timeout do
     local st = readInteger(cb + 0x04)
     if st and st ~= 0 then break end
     sleep(16); elapsed = elapsed + 16
   end
+
+  -- Restore original values
+  writeInteger(template + 0x28, origRepeatType)
+  writeInteger(template + 0x2C, origRepeatDay)
+
   local finalStatus = readInteger(cb + 0x04)
-  if not finalStatus or finalStatus ~= 1 then return false, "CreateWorldEvent failed (status=" .. tostring(finalStatus) .. ")" end
-  return true, evtName
+  if not finalStatus or finalStatus ~= 1 then return false, "ManageWorldEvent failed (status=" .. tostring(finalStatus) .. ")" end
+  return true, evtName .. " (triggered ManageWorldEvent)"
 end
 
 -- ============================================================
