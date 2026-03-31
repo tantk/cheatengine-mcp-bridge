@@ -2946,6 +2946,16 @@ local function spawnEvent(templateIdx, difficulty, timeout)
   local eventList = worldData ~= 0 and readQword(worldData + 0x80) or 0
   local countBefore = eventList ~= 0 and readInteger(eventList + 0x18) or 0
 
+  -- Set display flags on template BEFORE clone inherits them
+  local orig5C = readBytes(template + 0x5C, 1)
+  local orig30 = readBytes(template + 0x30, 1)
+  local orig64 = readFloat(template + 0x64)
+  writeBytes(template + 0x5C, 1)
+  writeBytes(template + 0x30, 1)
+  if difficulty and difficulty > 0 then
+    writeFloat(template + 0x64, difficulty * 1.0)
+  end
+
   writeQword(cb + 0xA0, template)
   writeQword(cb + 0x90, S.createWorldEventMI)
   writeQword(cb + 0x88, wecInst)
@@ -2959,21 +2969,41 @@ local function spawnEvent(templateIdx, difficulty, timeout)
     sleep(16); elapsed = elapsed + 16
   end
 
+  -- Restore template original values
+  writeBytes(template + 0x5C, orig5C)
+  writeBytes(template + 0x30, orig30)
+  writeFloat(template + 0x64, orig64)
+
   local finalStatus = readInteger(cb + 0x04)
   if not finalStatus or finalStatus ~= 1 then return false, "CreateWorldEvent failed (status=" .. tostring(finalStatus) .. ")" end
 
-  -- Step 2: Set display flag + difficulty on the new event BEFORE UI renders
-  eventList = readQword(worldData + 0x80)
-  local countAfter = eventList ~= 0 and readInteger(eventList + 0x18) or 0
-  if countAfter > countBefore then
-    local evtItems = readQword(eventList + 0x10)
-    local newEvt = readQword(evtItems + 0x20 + (countAfter - 1) * 8)
-    if newEvt and newEvt ~= 0 then
-      writeBytes(newEvt + 0x5C, 1)
-      if difficulty and difficulty > 0 then
-        -- Cap display at 11 (game UI max), but actual difficulty stays higher
-        local displayDiff = math.min(difficulty, 11)
-        writeFloat(newEvt + 0x64, displayDiff * 1.0)
+  -- Override difficulty on the clone (CreateWorldEvent overwrites +0x64 with its own calc)
+  -- Also force the icon controller to re-read by resetting its init flag
+  if difficulty and difficulty > 0 then
+    eventList = readQword(worldData + 0x80)
+    local countAfter = eventList ~= 0 and readInteger(eventList + 0x18) or 0
+    if countAfter > countBefore then
+      local evtItems = readQword(eventList + 0x10)
+      local newEvt = readQword(evtItems + 0x20 + (countAfter - 1) * 8)
+      if newEvt and newEvt ~= 0 then
+        writeFloat(newEvt + 0x64, difficulty * 1.0)
+        -- Also find the icon controller for this event and reset its init flag (+0x20=0)
+        -- so it re-reads the updated difficulty on next Update
+        local bigMapList = readQword(worldData + 0x60)
+        if bigMapList and bigMapList ~= 0 then
+          local bmCnt = readInteger(bigMapList + 0x18)
+          local bmItems = readQword(bigMapList + 0x10)
+          for i = bmCnt - 1, math.max(0, bmCnt - 3), -1 do
+            local icon = readQword(bmItems + 0x20 + i * 8)
+            if icon and icon ~= 0 then
+              local iconEvt = readQword(icon + 0x18)
+              if iconEvt == newEvt then
+                writeBytes(icon + 0x20, 0)
+                break
+              end
+            end
+          end
+        end
       end
     end
   end
