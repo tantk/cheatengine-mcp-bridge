@@ -1687,6 +1687,8 @@ label(genHeroError)
 label(doSimpleCall)
 label(doThreeIntCall)
 label(doPtrCall)
+label(noPtrCallParams)
+label(ptrCallReady)
 label(skipSetup)
 label(cmdDone)
 label(cmdError)
@@ -1939,15 +1941,26 @@ doPtrCall:
   push r9
   push r10
   push r11
-  sub rsp,50
-  mov rcx,[rbx+88]
+  sub rsp,58
+  mov rcx,[rbx+90]
   test rcx,rcx
   jz cmdError8
-  mov rdx,[rbx+08]
+  mov rdx,[rbx+88]
+  cmp qword ptr [rbx+A0],0
+  je noPtrCallParams
+  lea r8,[rbx+A0]
+  jmp ptrCallReady
+noPtrCallParams:
+  xor r8,r8
+ptrCallReady:
+  lea r9,[rbx+98]
+  mov qword ptr [rbx+98],0
   mov rax,[rbx+68]
   call rax
   mov [rbx+08],rax
-  add rsp,50
+  cmp qword ptr [rbx+98],0
+  jne cmdError8
+  add rsp,58
   pop r11
   pop r10
   pop r9
@@ -1958,7 +1971,7 @@ doPtrCall:
   mov dword ptr [rbx],0
   jmp noCmd
 cmdError8:
-  add rsp,50
+  add rsp,58
   pop r11
   pop r10
   pop r9
@@ -2908,26 +2921,39 @@ local function spawnEvent(templateIdx, timeout)
     if nl and nl > 0 and nl < 30 then evtName = readString(nameObj + 0x14, nl*2, true) or "" end
   end
 
-  -- Approach: temporarily force this template's conditions to trigger,
-  -- then call ManageWorldEvent which creates events through the game's own code path.
-  -- ManageWorldEvent checks: repeatType(+0x28), repeatDay(+0x2C), DeltaDay timing
-  -- We temporarily set repeatDay=0 and repeatType=0 to bypass cooldown checks
+  -- Call CreateWorldEvent(wec, template) via il2cpp_runtime_invoke
+  -- This 2-param overload handles everything: clone, area selection, map icon, registration
+  -- Resolve MethodInfo if not cached
+  if not S.createWorldEventMI then
+    local getMeth = getAddress("GameAssembly.il2cpp_class_get_method_from_name")
+    local wecKlass = readQword(wecInst)
+    local strBuf = allocateMemory(64)
+    writeString(strBuf, "CreateWorldEvent")
+    S.createWorldEventMI = executeCodeEx(0, nil, getMeth, wecKlass, strBuf, 1)
+    deAlloc(strBuf)
+    if not S.createWorldEventMI or S.createWorldEventMI == 0 then
+      S.createWorldEventMI = nil
+      return false, "CreateWorldEvent MI not found"
+    end
+    log(string.format("[SpawnEvent] CreateWorldEvent MI=%X", S.createWorldEventMI))
+  end
 
-  local origRepeatType = readInteger(template + 0x28)
-  local origRepeatDay = readInteger(template + 0x2C)
-  local origLastHappen = readQword(template + 0x18)
+  local riAddr = getAddress("GameAssembly.il2cpp_runtime_invoke")
+  if not riAddr or riAddr == 0 then return false, "runtime_invoke not found" end
 
-  -- Force conditions: repeatType=0 (one-time), set lastHappenTime to 0 so DeltaDay check passes
-  writeInteger(template + 0x28, 0)
-  writeInteger(template + 0x2C, 0)
+  -- Force unhandled area types to 0
+  local areaType = readInteger(template + 0x48)
+  if not areaType or areaType > 2 then
+    writeInteger(template + 0x48, 0)
+  end
 
-  -- Call ManageWorldEvent(wecInst) — safe, game's own code path
-  -- RVA 0xB91290
-  -- cmd=6: rcx=[+0x08], call [+0x68]
-  writeQword(cb + 0x08, wecInst)
-  writeQword(cb + 0x68, S.base + 0xB91290)
+  -- runtime_invoke(MI, wecInst, params=[template], &exc)
+  writeQword(cb + 0xA0, template)
+  writeQword(cb + 0x90, S.createWorldEventMI)
+  writeQword(cb + 0x88, wecInst)
+  writeQword(cb + 0x68, riAddr)
   writeInteger(cb + 0x04, 0)
-  writeInteger(cb, 6)
+  writeInteger(cb, 8)
   local elapsed = 0
   while elapsed < timeout do
     local st = readInteger(cb + 0x04)
@@ -2935,13 +2961,14 @@ local function spawnEvent(templateIdx, timeout)
     sleep(16); elapsed = elapsed + 16
   end
 
-  -- Restore original values
-  writeInteger(template + 0x28, origRepeatType)
-  writeInteger(template + 0x2C, origRepeatDay)
+  -- Restore area type
+  if areaType and areaType > 2 then
+    writeInteger(template + 0x48, areaType)
+  end
 
   local finalStatus = readInteger(cb + 0x04)
-  if not finalStatus or finalStatus ~= 1 then return false, "ManageWorldEvent failed (status=" .. tostring(finalStatus) .. ")" end
-  return true, evtName .. " (triggered ManageWorldEvent)"
+  if not finalStatus or finalStatus ~= 1 then return false, "CreateWorldEvent failed (status=" .. tostring(finalStatus) .. ")" end
+  return true, evtName
 end
 
 -- ============================================================
@@ -2949,7 +2976,7 @@ end
 -- ============================================================
 local frm = createForm(false)
 _itemAdderForm = frm
-frm.Caption = "LongYinLiZhiZhuan Item Adder v4 (Full Main Thread)"
+frm.Caption = "LongYinLiZhiZhuan Item Adder v5 runtime_invoke"
 frm.Width = 520; frm.Height = 600
 frm.Position = "poScreenCenter"; frm.BorderStyle = "bsSingle"
 
