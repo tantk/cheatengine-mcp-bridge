@@ -22,3 +22,9 @@ desktop.ini
 tools/
 release.sh
 .claude/skills/
+CLAUDE.md
+
+# Analysis session docs (local only)
+games/*/analysis/session_*.md
+games/*/analysis/ghidra_*.md
+games/*/analysis/event_spawner_*.md
