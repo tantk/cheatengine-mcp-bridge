@@ -23,6 +23,7 @@ tools/
 release.sh
 .claude/skills/
 CLAUDE.md
+.mcp.json
 
 # Analysis session docs (local only)
 games/*/analysis/session_*.md
