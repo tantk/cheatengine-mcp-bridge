@@ -181,3 +181,35 @@ The game does exactly this in `GenerateRandomEvent` (line 265-290):
 2. Try calling with repeatType=0 event first (simpler "random area" path)
 3. Or try the 6-param overload directly with a manually created EventData clone
 4. Or hook FUN_180480570 to understand what singleton it returns
+
+## Session Findings Summary (2026-04-01)
+
+### What works
+- Event spawning via il2cpp_runtime_invoke + CreateWorldEvent(2-param, RVA 0xB90370)
+- areaType=3 preserved (spawns outside city like natural events)
+- Difficulty via difficultyRate on template sub-object (+0x50 -> +0x68)
+- Post-spawn +0x64 override for exact difficulty (hover tooltip + gameplay)
+- Map hover tooltip: stars + color correct at any difficulty
+- Event interaction: combat, recruitment, rewards all work
+
+### Side panel display
+- Color set ONCE during WorldEventIconController.Update one-time init
+- GetDifficultyColor(+0x64) uses 6-entry RareLvData: 0=grey,1=green,2=blue,3=purple,4=orange,5=red
+- +0x5C=1 shows star section, +0x5C=0 hides it
+- Natural adventure events have +0x5C=0 but DO show stars (via "new event" indicator)
+- +0x5A=0 AND +0x5C=0 -> shows colored "new" indicator with stars
+- +0x5A=1 -> hides indicator (plain white)
+- Icon renders with game-calculated difficulty, post-spawn override only affects hover/gameplay
+
+### Clone does NOT preserve raw memory writes
+- BinaryFormatter serializes by field metadata, not offset
+- Setting bytes on WorldEventDataBase template has no effect on EventData clone
+- Only way to influence clone: modify serializable sub-objects (like difficultyRate)
+
+### Key EventData offsets
++0x50=areaID +0x54=direction +0x58=seen +0x5A=noticed +0x5B=hovering
++0x5C=showStars +0x5D=specialIcon +0x60=leftTime(int) +0x64=difficulty(float)
++0x68=difficultyRate(float) +0x6C=-1 +0x70=plotData +0x80=eventType
++0x90=rangeRate(float) +0x94=timestamp
+
+### Remaining: side panel color approximate, not exact user value
