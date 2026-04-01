@@ -2946,6 +2946,15 @@ local function spawnEvent(templateIdx, difficulty, timeout)
   local eventList = worldData ~= 0 and readQword(worldData + 0x80) or 0
   local countBefore = eventList ~= 0 and readInteger(eventList + 0x18) or 0
 
+  -- Set difficultyRate on template so the game creates the icon with correct color
+  -- Then override +0x64 after creation for exact difficulty
+  local origRate = 0
+  local rateObj = readQword(template + 0x50)
+  if difficulty and difficulty > 0 and rateObj and rateObj ~= 0 then
+    origRate = readFloat(rateObj + 0x68)
+    writeFloat(rateObj + 0x68, difficulty * 1.0)
+  end
+
   writeQword(cb + 0xA0, template)
   writeQword(cb + 0x90, S.createWorldEventMI)
   writeQword(cb + 0x88, wecInst)
@@ -2959,18 +2968,22 @@ local function spawnEvent(templateIdx, difficulty, timeout)
     sleep(16); elapsed = elapsed + 16
   end
 
+  -- Restore original difficultyRate
+  if difficulty and difficulty > 0 and rateObj and rateObj ~= 0 then
+    writeFloat(rateObj + 0x68, origRate)
+  end
+
   local finalStatus = readInteger(cb + 0x04)
   if not finalStatus or finalStatus ~= 1 then return false, "CreateWorldEvent failed (status=" .. tostring(finalStatus) .. ")" end
 
-  -- Set display flags + difficulty on the new event
-  eventList = readQword(worldData + 0x80)
-  local countAfter = eventList ~= 0 and readInteger(eventList + 0x18) or 0
-  if countAfter > countBefore then
-    local evtItems = readQword(eventList + 0x10)
-    local newEvt = readQword(evtItems + 0x20 + (countAfter - 1) * 8)
-    if newEvt and newEvt ~= 0 then
-      writeBytes(newEvt + 0x5A, 1)
-      if difficulty and difficulty > 0 then
+  -- Override +0x64 to exact desired difficulty (difficultyRate * random gave approximate value)
+  if difficulty and difficulty > 0 then
+    eventList = readQword(worldData + 0x80)
+    local countAfter = eventList ~= 0 and readInteger(eventList + 0x18) or 0
+    if countAfter > countBefore then
+      local evtItems = readQword(eventList + 0x10)
+      local newEvt = readQword(evtItems + 0x20 + (countAfter - 1) * 8)
+      if newEvt and newEvt ~= 0 then
         writeFloat(newEvt + 0x64, difficulty * 1.0)
       end
     end
