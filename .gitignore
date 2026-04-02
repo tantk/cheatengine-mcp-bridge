@@ -20,6 +20,7 @@ desktop.ini
 # Excel lock files
 ~$*.xlsx
 tools/
+!tools/rva_diff.py
 release.sh
 .claude/skills/
 CLAUDE.md
