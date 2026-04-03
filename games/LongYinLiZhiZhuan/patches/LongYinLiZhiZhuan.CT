@@ -390,8 +390,11 @@ end
 if syntaxcheck then return end
 
 -- Give all sect members the 武学天才 (tag 222) and 博学多才 (tag 243) talents.
--- AddTag checks for duplicates: if a hero already has the tag, it refreshes the
--- timer but doesn't create a duplicate. Safe to run on heroes that already have them.
+-- Uses hookCode cmd=8 (runtime_invoke) on main thread to avoid crash.
+-- Requires Item Adder to be connected first (sets up the hookCode).
+
+local cb = getAddress("cmdBuf")
+if not cb or cb == 0 then error("请先打开物品添加器并连接 [Open Item Adder and Connect first]") end
 
 local c = _il2cpp_init()
 local gc = readQword(c.gc.static + c.gc.instOff)
@@ -405,79 +408,83 @@ local hl = readQword(wd + 0x50)
 local heroCount = readInteger(hl + 0x18)
 local itemsPtr = readQword(hl + 0x10)
 
--- Resolve HaveTag and AddTag via method iterator (safe for overloads)
+-- Resolve AddTag MethodInfo
 local hdClass = c.hd and c.hd.klass or c.findClass("HeroData")
 if not hdClass then error("HeroData class not found") end
-
 local getMethods = getAddress("GameAssembly.il2cpp_class_get_methods")
 local getMethodName = getAddress("GameAssembly.il2cpp_method_get_name")
 local riAddr = getAddress("GameAssembly.il2cpp_runtime_invoke")
 
-local haveTagMI = nil
 local addTagMI = nil
 local iter = allocateMemory(8); writeQword(iter, 0)
 while true do
   local mi = executeCodeEx(0, nil, getMethods, hdClass, iter)
   if not mi or mi == 0 then break end
   local np = executeCodeEx(0, nil, getMethodName, mi)
-  local mn = np and readString(np, 64) or ""
-  if mn == "HaveTag" and not haveTagMI then haveTagMI = mi end
-  if mn == "AddTag" and not addTagMI then addTagMI = mi end
+  if np and readString(np, 64) == "AddTag" and not addTagMI then addTagMI = mi end
 end
 deAlloc(iter)
-
-if not haveTagMI then error("HaveTag MethodInfo not found") end
 if not addTagMI then error("AddTag MethodInfo not found") end
 
--- Prepare args buffer for il2cpp_runtime_invoke
-local argBuf = allocateMemory(64)
+-- Check tag ownership by reading tag list directly (safe from any thread)
+local function heroHasTag(h, tagID)
+  local tagList = readQword(h + 0x360)
+  if not tagList or tagList == 0 then return false end
+  local count = readInteger(tagList + 0x18)
+  local items = readQword(tagList + 0x10)
+  if not items or items == 0 then return false end
+  for j = 0, count - 1 do
+    local tag = readQword(items + 0x20 + j * 8)
+    if tag and tag ~= 0 and readInteger(tag + 0x10) == tagID then return true end
+  end
+  return false
+end
 
-local added222 = 0
-local added243 = 0
-local skipped = 0
+-- Call AddTag on main thread via hookCode cmd=8
+local function mainThreadAddTag(heroPtr, tagID)
+  local argBuf = allocateMemory(48)
+  writeInteger(argBuf + 0, tagID)
+  writeFloat(argBuf + 8, -1.0)       -- permanent
+  writeQword(argBuf + 16, 0)         -- source = null
+  writeInteger(argBuf + 24, 0)       -- showInfo = false
+  writeInteger(argBuf + 32, 0)       -- needFreshHeroDetail = false
 
+  writeQword(cb + 0x90, addTagMI)
+  writeQword(cb + 0x88, heroPtr)
+  writeQword(cb + 0xA0, argBuf)
+  writeQword(cb + 0x68, riAddr)
+  writeInteger(cb + 0x04, 0)
+  writeInteger(cb, 8)
+
+  local elapsed = 0
+  while elapsed < 2000 do
+    if readInteger(cb + 0x04) ~= 0 then break end
+    sleep(16); elapsed = elapsed + 16
+  end
+  deAlloc(argBuf)
+  return readInteger(cb + 0x04) == 1
+end
+
+-- Collect and process sect members
+local count222 = 0
+local count243 = 0
 for i = 0, heroCount - 1 do
   local h = readQword(itemsPtr + 0x20 + i * 8)
   if h and h ~= 0 then
     local dead = readBytes(h + 0x61, 1)
     local fid = readInteger(h + 0x84)
     if fid == playerForceID and dead == 0 then
-      -- Check and add tag 222 (武学天才)
-      writeQword(argBuf, 222)
-      local has222 = executeCodeEx(0, nil, riAddr, haveTagMI, h, argBuf, 0)
-      if has222 == 0 then
-        -- AddTag(222, -1.0, null, false, false)
-        writeInteger(argBuf + 0, 222)      -- id
-        writeFloat(argBuf + 8, -1.0)       -- time = permanent
-        writeQword(argBuf + 16, 0)         -- source = null
-        writeInteger(argBuf + 24, 0)       -- showInfo = false
-        writeInteger(argBuf + 32, 0)       -- needFreshHeroDetail = false
-        executeCodeEx(0, nil, riAddr, addTagMI, h, argBuf, 0)
-        added222 = added222 + 1
-      else
-        skipped = skipped + 1
+      if not heroHasTag(h, 222) then
+        if mainThreadAddTag(h, 222) then count222 = count222 + 1 end
       end
-
-      -- Check and add tag 243 (博学多才)
-      writeQword(argBuf, 243)
-      local has243 = executeCodeEx(0, nil, riAddr, haveTagMI, h, argBuf, 0)
-      if has243 == 0 then
-        writeInteger(argBuf + 0, 243)
-        writeFloat(argBuf + 8, -1.0)
-        writeQword(argBuf + 16, 0)
-        writeInteger(argBuf + 24, 0)
-        writeInteger(argBuf + 32, 0)
-        executeCodeEx(0, nil, riAddr, addTagMI, h, argBuf, 0)
-        added243 = added243 + 1
-      else
-        skipped = skipped + 1
+      if not heroHasTag(h, 243) then
+        if mainThreadAddTag(h, 243) then count243 = count243 + 1 end
       end
     end
   end
 end
 
-deAlloc(argBuf)
-print(string.format("[SectProdigy] Added 武学天才 to %d, 博学多才 to %d members (%d already had them)", added222, added243, skipped))
+print(string.format("[SectProdigy] Added 武学天才 to %d, 博学多才 to %d members", count222, count243))
 {$asm}
 
 [DISABLE]
