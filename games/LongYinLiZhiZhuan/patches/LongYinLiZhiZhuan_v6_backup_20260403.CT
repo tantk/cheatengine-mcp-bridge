@@ -896,18 +896,11 @@ local input = inputQuery("门派人数上限 [Member Limit]", "设置新的门�
 local newLimit = tonumber(input)
 if not newLimit or newLimit < 1 then error("Invalid limit") end
 
--- Resolve method addresses dynamically (no hardcoded RVAs)
-local c = _il2cpp_init()
-local fdClass = c.findClass("ForceData")
-if not fdClass then error("ForceData class not found") end
-local gmfn = getAddress("GameAssembly.il2cpp_class_get_method_from_name")
-local nm = allocateMemory(64)
+local ga = getAddress("GameAssembly.dll")
 
 -- === Hook 1: GetMaxHeroNum -> return custom float (for UI display) ===
-writeString(nm, "GetMaxHeroNum")
-local mi1 = executeCodeEx(0, nil, gmfn, fdClass, nm, 0)
-if not mi1 or mi1 == 0 then deAlloc(nm); error("GetMaxHeroNum not found") end
-local target1 = readQword(mi1)  -- methodPointer
+-- RVA: 0xB991F0, original: 48 83 EC 28 48 8B 89 40 01 00 00 48 85 C9
+local target1 = ga + 0xB991F0
 local orig1 = readBytes(target1, 14, true)
 
 -- Allocate codecave near target for rel32 jmp
@@ -930,14 +923,10 @@ writeBytes(target1 + 1, jmpRel % 256, math.floor(jmpRel/256) % 256,
 writeBytes(target1 + 5, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90)
 
 -- === Hook 2: PopulationNotFull -> always return true ===
-writeString(nm, "PopulationNotFull")
-local mi2 = executeCodeEx(0, nil, gmfn, fdClass, nm, 0)
-if not mi2 or mi2 == 0 then deAlloc(nm); error("PopulationNotFull not found") end
-local target2 = readQword(mi2)  -- methodPointer
+-- RVA: 0xB9A110, original: 48 83 EC 38 ...
+local target2 = ga + 0xB9A110
 local orig2 = readBytes(target2, 3, true)
 writeBytes(target2, 0xB0, 0x01, 0xC3)  -- mov al,1; ret
-
-deAlloc(nm)  -- done with name buffer
 
 -- Register symbol for live editing
 unregisterSymbol("MemberLimit")
