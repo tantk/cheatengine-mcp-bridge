@@ -441,29 +441,27 @@ local function heroHasTag(h, tagID)
 end
 
 -- Call AddTag on main thread via hookCode cmd=8
--- il2cpp_runtime_invoke expects void** params: array of POINTERS to values
+-- hookCode does: lea r8,[cmdBuf+A0] then calls runtime_invoke(MI, inst, r8, exc)
+-- So runtime_invoke sees params = cmdBuf+A0, and reads params[0..4] as void* pointers
+-- to each argument value. We store the pointer array at cmdBuf+A0 and values in a separate buf.
 local function mainThreadAddTag(heroPtr, tagID)
-  -- Layout: [0x00-0x28] = pointer array, [0x30+] = value storage
-  local buf = allocateMemory(96)
-  local valBase = buf + 0x30
+  -- Value storage (persists during the call)
+  local vals = allocateMemory(32)
+  writeInteger(vals + 0, tagID)      -- int id
+  writeFloat(vals + 4, -1.0)        -- float time = permanent
+  writeInteger(vals + 8, 0)         -- bool showInfo = false
+  writeInteger(vals + 12, 0)        -- bool needFreshHeroDetail = false
 
-  -- Store actual values
-  writeInteger(valBase + 0, tagID)    -- int id
-  writeFloat(valBase + 4, -1.0)      -- float time = permanent
-  -- string source = null (no storage needed)
-  writeInteger(valBase + 8, 0)       -- bool showInfo = false
-  writeInteger(valBase + 12, 0)      -- bool needFreshHeroDetail = false
-
-  -- Pointer array (void** params)
-  writeQword(buf + 0x00, valBase + 0)   -- &id
-  writeQword(buf + 0x08, valBase + 4)   -- &time
-  writeQword(buf + 0x10, 0)             -- null (string source)
-  writeQword(buf + 0x18, valBase + 8)   -- &showInfo
-  writeQword(buf + 0x20, valBase + 12)  -- &needFreshHeroDetail
+  -- Write pointer array directly at cmdBuf+A0 (hookCode does lea r8,[rbx+A0])
+  writeQword(cb + 0xA0, vals + 0)   -- params[0] = &id
+  writeQword(cb + 0xA8, vals + 4)   -- params[1] = &time
+  writeQword(cb + 0xB0, 0)          -- params[2] = null (string source)
+  writeQword(cb + 0xB8, vals + 8)   -- params[3] = &showInfo
+  writeQword(cb + 0xC0, vals + 12)  -- params[4] = &needFreshHeroDetail
 
   writeQword(cb + 0x90, addTagMI)
   writeQword(cb + 0x88, heroPtr)
-  writeQword(cb + 0xA0, buf)  -- pointer to params array
+  -- cb+0x68 = function to call (runtime_invoke)
   writeQword(cb + 0x68, riAddr)
   writeInteger(cb + 0x04, 0)
   writeInteger(cb, 8)
@@ -473,7 +471,7 @@ local function mainThreadAddTag(heroPtr, tagID)
     if readInteger(cb + 0x04) ~= 0 then break end
     sleep(16); elapsed = elapsed + 16
   end
-  deAlloc(buf)
+  deAlloc(vals)
   return readInteger(cb + 0x04) == 1
 end
 
