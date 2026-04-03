@@ -65,7 +65,7 @@ def main():
                 # Sanitize name for C identifier context
                 # NOTE: Do NOT insert /*FUN_xxx*/ between name and (
                 # because GitNexus C parser needs identifier( to detect calls.
-                safe = name.replace('<', '_').replace('>', '_').replace(',', '_')
+                safe = name.replace('<', '_').replace('>', '_').replace(',', '_').replace('.', '_')
                 return safe
             return m.group(0)
         return fun_pattern.sub(replacer, text)
@@ -94,10 +94,11 @@ def main():
         base = fname.replace('.c', '')
         new_name = file_to_name.get(fname)
         if new_name:
-            # Sanitize for filesystem
+            # Sanitize for filesystem and GitNexus parser (dots break C identifier parsing)
             safe_name = new_name.replace('<', '[').replace('>', ']').replace(':', '_')
             safe_name = safe_name.replace('/', '_').replace('\\', '_').replace('?', '_')
             safe_name = safe_name.replace('*', '_').replace('"', '_').replace('|', '_')
+            safe_name = safe_name.replace('.', '_')
             out_fname = f"{safe_name}.c"
         else:
             out_fname = fname
