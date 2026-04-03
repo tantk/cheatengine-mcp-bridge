@@ -856,19 +856,33 @@ local gmfn = getAddress("GameAssembly.il2cpp_class_get_method_from_name")
 local nm = allocateMemory(64)
 
 _noCostPatches = {}
-for _, params in ipairs({2, 3}) do
-  writeString(nm, "CostResource")
-  local mi = executeCodeEx(0, nil, gmfn, fdClass, nm, params)
-  if mi and mi ~= 0 then
-    local addr = readQword(mi)
-    local origByte = readBytes(addr, 1)
-    table.insert(_noCostPatches, {addr=addr, orig=origByte})
-    writeBytes(addr, 0xC3)  -- ret immediately
-    print(string.format("[NoCost] Patched CostResource(%d) at %X", params, addr))
+-- Iterate ALL CostResource overloads (not just by param count, since
+-- il2cpp_class_get_method_from_name only returns one match per param count
+-- but ForceData has three 2-param overloads with different types).
+local getMethods = getAddress("GameAssembly.il2cpp_class_get_methods")
+local getMethodName = getAddress("GameAssembly.il2cpp_method_get_name")
+local iter = allocateMemory(8); writeQword(iter, 0)
+local patched = {}
+while true do
+  local mi = executeCodeEx(0, nil, getMethods, fdClass, iter)
+  if not mi or mi == 0 then break end
+  local namePtr = executeCodeEx(0, nil, getMethodName, mi)
+  if namePtr and namePtr ~= 0 then
+    local mname = readString(namePtr, 64)
+    if mname == "CostResource" then
+      local addr = readQword(mi)
+      if addr and addr ~= 0 and not patched[addr] then
+        local origByte = readBytes(addr, 1)
+        table.insert(_noCostPatches, {addr=addr, orig=origByte})
+        patched[addr] = true
+        writeBytes(addr, 0xC3)  -- ret immediately
+        print(string.format("[NoCost] Patched CostResource at %X", addr))
+      end
+    end
   end
 end
-deAlloc(nm)
-print(string.format("[NoCost] %d methods patched — resources won't be consumed", #_noCostPatches))
+deAlloc(iter); deAlloc(nm)
+print(string.format("[NoCost] %d CostResource methods patched", #_noCostPatches))
 {$asm}
 
 [DISABLE]
