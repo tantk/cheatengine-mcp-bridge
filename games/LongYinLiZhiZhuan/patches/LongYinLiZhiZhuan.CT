@@ -55,31 +55,33 @@ print("[Money] (value remains as set)")
 [ENABLE]
 {$lua}
 if syntaxcheck then return end
-local function getHero() return _getHero() end
-local hero, err = getHero()
-if not hero then error(err) end
-local itemListData = readQword(hero + 0x220)
-if not itemListData or itemListData == 0 then error("ItemListData not found") end
-local curMax = readFloat(itemListData + 0x20)
-_maxWeightOrig = curMax
-writeFloat(itemListData + 0x20, 99999.0)
-print(string.format("[Weight] Max carry weight: %.0f -> 99999", curMax))
+-- Hook CheckHeroItemWeightBiggerThanMax -> always return false (never overloaded)
+-- The game recalculates maxWeight every frame, so a one-shot write doesn't persist.
+-- Instead we patch the CHECK function so overloaded status is never triggered.
+local c = _il2cpp_init()
+local aiClass = c.findClass("AIController")
+if not aiClass then error("AIController class not found") end
+local gmfn = getAddress("GameAssembly.il2cpp_class_get_method_from_name")
+local nm = allocateMemory(64)
+writeString(nm, "CheckHeroItemWeightBiggerThanMax")
+local mi = executeCodeEx(0, nil, gmfn, aiClass, nm, 1)
+deAlloc(nm)
+if not mi or mi == 0 then error("CheckHeroItemWeightBiggerThanMax not found") end
+local target = readQword(mi)
+_maxWeightHook = { addr = target, orig = readBytes(target, 3, true) }
+writeBytes(target, 0xB0, 0x00, 0xC3)  -- mov al,0; ret (never overloaded)
+print(string.format("[Weight] Patched CheckHeroItemWeightBiggerThanMax at %X — never overloaded", target))
 {$asm}
 
 [DISABLE]
 {$lua}
 if syntaxcheck then return end
-if _maxWeightOrig then
-  local function getHero() local h = _getHero(); return h end
-  local hero = getHero()
-  if hero then
-    local itemListData = readQword(hero + 0x220)
-    if itemListData and itemListData ~= 0 then
-      writeFloat(itemListData + 0x20, _maxWeightOrig)
-    end
+if _maxWeightHook then
+  for i, b in ipairs(_maxWeightHook.orig) do
+    writeBytes(_maxWeightHook.addr + i - 1, b)
   end
-  print(string.format("[Weight] Restored to %.0f", _maxWeightOrig))
-  _maxWeightOrig = nil
+  print("[Weight] Restored original weight check")
+  _maxWeightHook = nil
 end
 {$asm}
               </AssemblerScript>
