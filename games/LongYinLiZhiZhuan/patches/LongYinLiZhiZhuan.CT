@@ -4180,7 +4180,20 @@ function _il2cpp_init()
   -- Try to resolve missing classes on next access
   -- extraFields is an optional table of additional fields to attach (e.g., {skillOff=0x130})
   _il2cppCache.ensure = function(self, field, className, instOff, extraFields)
-    if self[field] then return self[field] end
+    local existing = self[field]
+    if existing then
+      -- Refresh static pointer if it was 0 (class wasn't fully initialized yet)
+      if existing.klass and (not existing.static or existing.static == 0) then
+        existing.static = readQword(existing.klass + 0xB8)
+      end
+      -- Apply any missing extra fields
+      if extraFields then
+        for fk, fv in pairs(extraFields) do
+          if not existing[fk] then existing[fk] = fv end
+        end
+      end
+      return existing
+    end
     local k = self.findClass(className)
     if k then
       local entry = {klass=k, static=readQword(k+0xB8)}
