@@ -5,6 +5,8 @@ description: Create new cheats for LongYinLiZhiZhuan by analyzing the game's dec
 
 # Cheat Creator for LongYinLiZhiZhuan
 
+**BEFORE STARTING:** Read `docs/reverse-engineering/pipeline-research-checklist.md` → "Before Modifying the CT" and "Before Using the Call Graph" sections. Key rules: use method iterator for overloads (not `get_method_from_name`), test with fresh CE attach, always cross-verify call graph with grep.
+
 Create cheats by: understanding what the user wants → finding the right game code → building the CE implementation.
 
 ## Workflow
