@@ -384,7 +384,7 @@ print("[SectTalent] Disabled (talent points remain as set)")
 {$lua}
 if syntaxcheck then return end
 local c = _il2cpp_init()
-if not c:ensure("gd", "GlobalData") then error("GlobalData not loaded yet - try again") end
+if not c:ensure("gd", "GlobalData", nil, {skillOff=0x130}) then error("GlobalData not loaded yet - try again") end
 local listPtr = readQword(c.gd.static + c.gd.skillOff)
 if not listPtr or listPtr == 0 then error("MaxSkillNum list not found") end
 local count = readInteger(listPtr + 0x18)
@@ -403,7 +403,7 @@ if syntaxcheck then return end
 if _skillLimitOrig then
   local ok, c = pcall(_il2cpp_init)
   if ok and c then
-    if not c:ensure("gd", "GlobalData") then error("GlobalData not loaded yet - try again") end
+    if not c:ensure("gd", "GlobalData", nil, {skillOff=0x130}) then error("GlobalData not loaded yet - try again") end
 local listPtr = readQword(c.gd.static + c.gd.skillOff)
     if listPtr and listPtr ~= 0 then
       local items = readQword(listPtr + 0x10)
@@ -430,7 +430,7 @@ end
 {$lua}
 if syntaxcheck then return end
 local c = _il2cpp_init()
-if not c:ensure("gdc", "GameDataController", 0x20) then error("GameDataController not loaded yet - try again") end
+if not c:ensure("gdc", "GameDataController", 0x20, {tagBaseOff=0x198}) then error("GameDataController not loaded yet - try again") end
 local gdcInstance = readQword(c.gdc.static + c.gdc.instOff)
 if not gdcInstance or gdcInstance == 0 then error("GDC instance not found") end
 local tagDataBase = readQword(gdcInstance + c.gdc.tagBaseOff)
@@ -489,7 +489,7 @@ end
 {$lua}
 if syntaxcheck then return end
 local c = _il2cpp_init()
-if not c:ensure("gdc", "GameDataController", 0x20) then error("GameDataController not loaded yet - try again") end
+if not c:ensure("gdc", "GameDataController", 0x20, {tagBaseOff=0x198}) then error("GameDataController not loaded yet - try again") end
 local gdcInstance = readQword(c.gdc.static + c.gdc.instOff)
 if not gdcInstance or gdcInstance == 0 then error("GDC instance not found") end
 local tagDataBase = readQword(gdcInstance + c.gdc.tagBaseOff)
@@ -4178,15 +4178,17 @@ function _il2cpp_init()
   end
 
   -- Try to resolve missing classes on next access
-  _il2cppCache.ensure = function(self, field, className, instOff)
+  -- extraFields is an optional table of additional fields to attach (e.g., {skillOff=0x130})
+  _il2cppCache.ensure = function(self, field, className, instOff, extraFields)
     if self[field] then return self[field] end
     local k = self.findClass(className)
     if k then
-      if instOff then
-        self[field] = {klass=k, static=readQword(k+0xB8), instOff=instOff}
-      else
-        self[field] = {klass=k}
+      local entry = {klass=k, static=readQword(k+0xB8)}
+      if instOff then entry.instOff = instOff end
+      if extraFields then
+        for fk, fv in pairs(extraFields) do entry[fk] = fv end
       end
+      self[field] = entry
     end
     return self[field]
   end
