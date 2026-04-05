@@ -891,7 +891,7 @@ print("[Loyalty] Values remain as set")
               <Description>"全门派武学槽位满 [Max Skill Slots]"</Description>
               <Color>000000</Color>
               <VariableType>Auto Assembler Script</VariableType>
-              <AssemblerScript><![CDATA[[ENABLE]
+              <AssemblerScript>[ENABLE]
 {$lua}
 if syntaxcheck then return end
 local hero = _getHero()
@@ -931,7 +931,7 @@ print(string.format("[SkillSlots] Set %d sect members to 120 max for all skill t
 if syntaxcheck then return end
 print("[SkillSlots] Values remain as set")
 {$asm}
-]]></AssemblerScript>
+</AssemblerScript>
             </CheatEntry>
           <CheatEntry>
               <ID>1104</ID>
@@ -1155,44 +1155,7 @@ print("[SectCurrency] (value remains as set)")
 {$asm}
               </AssemblerScript>
             </CheatEntry>
-          </CheatEntries>
-        </CheatEntry>
-
-        <CheatEntry><ID>76</ID><Description>"--- 特殊资源 [Special Resources] ---"</Description><Options moHideChildren="1" moAllowManualCollapseAndExpand="1" /><GroupHeader>1</GroupHeader><Color>008000</Color><CheatEntries><CheatEntry>
-              <ID>1107</ID>
-              <Description>"设置陨铁 [Meteorite Iron]"</Description>
-              <Color>000000</Color>
-              <VariableType>Auto Assembler Script</VariableType>
-              <AssemblerScript>[ENABLE]
-{$lua}
-if syntaxcheck then return end
-local wd = _getWorldData()
-if not wd then error("WorldData null") end
-local cur = readInteger(wd + 0x228)
-local input = inputQuery("陨铁 [Meteorite Iron]",
-  "当前: " .. cur .. " / Current: " .. cur .. "\n设置新数量 / Set new amount:", "999")
-if not input then return end
-local val = tonumber(input)
-if not val or val &lt; 0 then error("Invalid amount") end
-writeInteger(wd + 0x228, math.floor(val))
-print(string.format("[MeteoriteIron] Set to %d (was %d)", val, cur))
-{$asm}
-
-[DISABLE]
-{$lua}
-if syntaxcheck then return end
-print("[MeteoriteIron] Value remains as set")
-{$asm}
-</AssemblerScript>
-            </CheatEntry>
-          </CheatEntries></CheatEntry><CheatEntry>
-          <ID>95</ID>
-          <Description>"--- 科研 [Research] ---"</Description>
-          <Options moHideChildren="1" moAllowManualCollapseAndExpand="1" />
-          <GroupHeader>1</GroupHeader>
-          <Color>008000</Color>
-          <CheatEntries>
-            <CheatEntry>
+          <CheatEntry>
               <ID>1410</ID>
               <Description>"研究进度100% [Research → 100%]"</Description>
               <Color>000000</Color>
@@ -1247,17 +1210,51 @@ print("[Research] (toggle again to complete next research)")
 {$asm}
 </AssemblerScript>
             </CheatEntry>
-          </CheatEntries>
-        </CheatEntry>
+          <CheatEntry>
+              <ID>1420</ID>
+              <Description>"马匹加速 (速度会存档,关闭后恢复) [Horse Speed - saved with game, disable to restore]"</Description>
+              <Color>000000</Color>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript>[ENABLE]
+{$lua}
+if syntaxcheck then return end
+local hero = _getHero()
+if not hero then error("Hero not found") end
+local input = InputQuery("Boost Horse Speed", "Enter speed multiplier (2-500, default 100):", "100")
+if not input then print("[Travel] Cancelled"); return end
+local multi = tonumber(input) or 5
+if multi &gt; 500 then multi = 500 end
+if multi &lt; 1 then multi = 1 end
 
-        <CheatEntry>
-          <ID>90</ID>
-          <Description>"--- 建筑 [Buildings] ---"</Description>
-          <Options moHideChildren="1" moAllowManualCollapseAndExpand="1" />
-          <GroupHeader>1</GroupHeader>
-          <Color>008000</Color>
-          <CheatEntries>
-            <CheatEntry>
+-- Boost horse speed directly (hero+0x208=horse ItemData, +0x88=HorseData, +0x14=speed float)
+local horseItem = readQword(hero + 0x208)
+if not horseItem or horseItem == 0 then error("No horse equipped! Equip a horse first.") end
+local hdOff = (_itemAdderState and _itemAdderState.OFF_HORSE) or 0x88
+local horseData = readQword(horseItem + hdOff)
+if not horseData or horseData == 0 then
+  -- Try alternate offset
+  hdOff = (hdOff == 0x88) and 0x80 or 0x88
+  horseData = readQword(horseItem + hdOff)
+end
+if not horseData or horseData == 0 then error("Horse has no HorseData") end
+local origSpeed = readFloat(horseData + 0x14)
+_travelOrig = {addr = horseData + 0x14, val = origSpeed}
+writeFloat(horseData + 0x14, origSpeed * multi)
+print(string.format("[Travel] Horse speed: %.0f -&gt; %.0f (x%d)", origSpeed, origSpeed * multi, multi))
+{$asm}
+
+[DISABLE]
+{$lua}
+if syntaxcheck then return end
+if _travelOrig then
+  writeFloat(_travelOrig.addr, _travelOrig.val)
+  print(string.format("[Travel] Horse speed restored to %.0f", _travelOrig.val))
+  _travelOrig = nil
+end
+{$asm}
+</AssemblerScript>
+            </CheatEntry>
+          <CheatEntry>
               <ID>1400</ID>
               <Description>"建筑剩余1天 [Build Time → 1 Day]"</Description>
               <Color>000000</Color>
@@ -1325,67 +1322,40 @@ print("[Building] (toggle again to complete new constructions)")
           </CheatEntries>
         </CheatEntry>
 
-        <CheatEntry>
+        <CheatEntry><ID>76</ID><Description>"--- 特殊资源 [Special Resources] ---"</Description><Options moHideChildren="1" moAllowManualCollapseAndExpand="1" /><GroupHeader>1</GroupHeader><Color>008000</Color><CheatEntries><CheatEntry>
+              <ID>1107</ID>
+              <Description>"设置陨铁 [Meteorite Iron]"</Description>
+              <Color>000000</Color>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript>[ENABLE]
+{$lua}
+if syntaxcheck then return end
+local wd = _getWorldData()
+if not wd then error("WorldData null") end
+local cur = readInteger(wd + 0x228)
+local input = inputQuery("陨铁 [Meteorite Iron]",
+  "当前: " .. cur .. " / Current: " .. cur .. "\n设置新数量 / Set new amount:", "999")
+if not input then return end
+local val = tonumber(input)
+if not val or val &lt; 0 then error("Invalid amount") end
+writeInteger(wd + 0x228, math.floor(val))
+print(string.format("[MeteoriteIron] Set to %d (was %d)", val, cur))
+{$asm}
+
+[DISABLE]
+{$lua}
+if syntaxcheck then return end
+print("[MeteoriteIron] Value remains as set")
+{$asm}
+</AssemblerScript>
+            </CheatEntry>
+          </CheatEntries></CheatEntry><CheatEntry>
           <ID>97</ID>
           <Description>"--- 探索 (在物品添加器里) [Exploration - in Item Adder] ---"</Description>
           <GroupHeader>1</GroupHeader>
           <Options moHideChildren="1" moAllowManualCollapseAndExpand="1" />
           <Color>008000</Color>
           <CheatEntries>
-          </CheatEntries>
-        </CheatEntry>
-
-        <CheatEntry>
-          <ID>96</ID>
-          <Description>"--- 旅行 [Travel] ---"</Description>
-          <Options moHideChildren="1" moAllowManualCollapseAndExpand="1" />
-          <GroupHeader>1</GroupHeader>
-          <Color>008000</Color>
-          <CheatEntries>
-            <CheatEntry>
-              <ID>1420</ID>
-              <Description>"马匹加速 (速度会存档,关闭后恢复) [Horse Speed - saved with game, disable to restore]"</Description>
-              <Color>000000</Color>
-              <VariableType>Auto Assembler Script</VariableType>
-              <AssemblerScript>[ENABLE]
-{$lua}
-if syntaxcheck then return end
-local hero = _getHero()
-if not hero then error("Hero not found") end
-local input = InputQuery("Boost Horse Speed", "Enter speed multiplier (2-500, default 100):", "100")
-if not input then print("[Travel] Cancelled"); return end
-local multi = tonumber(input) or 5
-if multi &gt; 500 then multi = 500 end
-if multi &lt; 1 then multi = 1 end
-
--- Boost horse speed directly (hero+0x208=horse ItemData, +0x88=HorseData, +0x14=speed float)
-local horseItem = readQword(hero + 0x208)
-if not horseItem or horseItem == 0 then error("No horse equipped! Equip a horse first.") end
-local hdOff = (_itemAdderState and _itemAdderState.OFF_HORSE) or 0x88
-local horseData = readQword(horseItem + hdOff)
-if not horseData or horseData == 0 then
-  -- Try alternate offset
-  hdOff = (hdOff == 0x88) and 0x80 or 0x88
-  horseData = readQword(horseItem + hdOff)
-end
-if not horseData or horseData == 0 then error("Horse has no HorseData") end
-local origSpeed = readFloat(horseData + 0x14)
-_travelOrig = {addr = horseData + 0x14, val = origSpeed}
-writeFloat(horseData + 0x14, origSpeed * multi)
-print(string.format("[Travel] Horse speed: %.0f -&gt; %.0f (x%d)", origSpeed, origSpeed * multi, multi))
-{$asm}
-
-[DISABLE]
-{$lua}
-if syntaxcheck then return end
-if _travelOrig then
-  writeFloat(_travelOrig.addr, _travelOrig.val)
-  print(string.format("[Travel] Horse speed restored to %.0f", _travelOrig.val))
-  _travelOrig = nil
-end
-{$asm}
-</AssemblerScript>
-            </CheatEntry>
           </CheatEntries>
         </CheatEntry>
 
