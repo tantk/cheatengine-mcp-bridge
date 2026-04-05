@@ -86,35 +86,7 @@ print("[Rarity] (values remain as set)")
 {$asm}
               </AssemblerScript>
             </CheatEntry>
-            <CheatEntry>
-              <ID>600</ID>
-              <Description>"设置门派贡献 [Sect Currency]"</Description>
-              <Color>000000</Color>
-              <VariableType>Auto Assembler Script</VariableType>
-              <AssemblerScript>
-[ENABLE]
-{$lua}
-if syntaxcheck then return end
-local function getHero() return _getHero() end
-local hero, err = getHero()
-if not hero then error(err) end
-local cur = readFloat(hero + 0x1C0)
-local input = InputQuery("Sect Currency", "Current: " .. string.format("%.1f", cur) .. ". Enter new value:", "1000")
-if input then
-  local val = tonumber(input) or 1000
-  writeFloat(hero + 0x1C0, val * 1.0)
-  print(string.format("[SectCurrency] Set to %.0f", val))
-end
-{$asm}
-
-[DISABLE]
-{$lua}
-if syntaxcheck then return end
-print("[SectCurrency] (value remains as set)")
-{$asm}
-              </AssemblerScript>
-            </CheatEntry>
-          </CheatEntries>
+            </CheatEntries>
         </CheatEntry>
 
         <CheatEntry>
@@ -1107,6 +1079,34 @@ if _memberLimitHook then
 end
 {$asm}
 </AssemblerScript>
+            </CheatEntry>
+          <CheatEntry>
+              <ID>600</ID>
+              <Description>"设置门派贡献 [Sect Currency]"</Description>
+              <Color>000000</Color>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript>
+[ENABLE]
+{$lua}
+if syntaxcheck then return end
+local function getHero() return _getHero() end
+local hero, err = getHero()
+if not hero then error(err) end
+local cur = readFloat(hero + 0x1C0)
+local input = InputQuery("Sect Currency", "Current: " .. string.format("%.1f", cur) .. ". Enter new value:", "1000")
+if input then
+  local val = tonumber(input) or 1000
+  writeFloat(hero + 0x1C0, val * 1.0)
+  print(string.format("[SectCurrency] Set to %.0f", val))
+end
+{$asm}
+
+[DISABLE]
+{$lua}
+if syntaxcheck then return end
+print("[SectCurrency] (value remains as set)")
+{$asm}
+              </AssemblerScript>
             </CheatEntry>
           </CheatEntries>
         </CheatEntry>
