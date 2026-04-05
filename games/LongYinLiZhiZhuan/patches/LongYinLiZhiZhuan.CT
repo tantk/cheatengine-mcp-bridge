@@ -1119,7 +1119,7 @@ print("[MeteoriteIron] Value remains as set")
           <CheatEntries>
             <CheatEntry>
               <ID>1410</ID>
-              <Description>"瞬间完成当前研究 [Instant Research]"</Description>
+              <Description>"研究进度100% [Research → 100%]"</Description>
               <Color>000000</Color>
               <VariableType>Auto Assembler Script</VariableType>
               <AssemblerScript><![CDATA[[ENABLE]
@@ -1184,7 +1184,7 @@ print("[Research] (toggle again to complete next research)")
           <CheatEntries>
             <CheatEntry>
               <ID>1400</ID>
-              <Description>"瞬间完成所有建筑 [Instant Build]"</Description>
+              <Description>"建筑剩余1天 [Build Time → 1 Day]"</Description>
               <Color>000000</Color>
               <VariableType>Auto Assembler Script</VariableType>
               <AssemblerScript>
