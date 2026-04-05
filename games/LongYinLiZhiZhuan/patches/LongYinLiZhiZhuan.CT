@@ -1108,7 +1108,10 @@ end
 {$asm}
 </AssemblerScript>
             </CheatEntry>
-          <CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+
+        <CheatEntry><ID>76</ID><Description>"--- 特殊资源 [Special Resources] ---"</Description><Options moHideChildren="1" moAllowManualCollapseAndExpand="1" /><GroupHeader>1</GroupHeader><Color>008000</Color><CheatEntries><CheatEntry>
               <ID>1107</ID>
               <Description>"设置陨铁 [Meteorite Iron]"</Description>
               <Color>000000</Color>
@@ -1135,10 +1138,7 @@ print("[MeteoriteIron] Value remains as set")
 {$asm}
 </AssemblerScript>
             </CheatEntry>
-          </CheatEntries>
-        </CheatEntry>
-
-        <CheatEntry>
+          </CheatEntries></CheatEntry><CheatEntry>
           <ID>95</ID>
           <Description>"--- 科研 [Research] ---"</Description>
           <Options moHideChildren="1" moAllowManualCollapseAndExpand="1" />
