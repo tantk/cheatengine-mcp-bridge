@@ -1398,7 +1398,7 @@ print("[Battle] Speed timer stopped, restored to 1x")
             </CheatEntry>
             <CheatEntry>
               <ID>1000</ID>
-              <Description>"一击必杀 [One-Hit KO]"</Description>
+              <Description>"敌人1血 [Enemy 1 HP]"</Description>
               <Color>000000</Color>
               <VariableType>Auto Assembler Script</VariableType>
               <AssemblerScript>
