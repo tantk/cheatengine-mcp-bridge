@@ -870,6 +870,54 @@ print("[ForceFavor] (values remain as set)")
         </CheatEntry>
 
         <CheatEntry>
+          <ID>74</ID>
+          <Description>"--- 门派管理 [Sect Management] ---"</Description>
+          <Options moHideChildren="1" moAllowManualCollapseAndExpand="1"/>
+          <GroupHeader>1</GroupHeader>
+          <Color>008000</Color>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>1108</ID>
+              <Description>"全门派忠诚满 [Max Loyalty]"</Description>
+              <Color>000000</Color>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript><![CDATA[[ENABLE]
+{$lua}
+if syntaxcheck then return end
+local hero = _getHero()
+if not hero then error("Hero not found") end
+local playerForceID = readInteger(hero + 0x84)
+local wd = _getWorldData()
+local hl = readQword(wd + 0x50)
+local heroCount = readInteger(hl + 0x18)
+local itemsPtr = readQword(hl + 0x10)
+
+local count = 0
+for i = 0, heroCount - 1 do
+  local h = readQword(itemsPtr + 0x20 + i * 8)
+  if h and h ~= 0 then
+    local dead = readBytes(h + 0x61, 1)
+    local fid = readInteger(h + 0x84)
+    if fid == playerForceID and dead == 0 then
+      writeFloat(h + 0x1CC, 100.0)
+      count = count + 1
+    end
+  end
+end
+print(string.format("[Loyalty] Set %d sect members to 100%% loyalty", count))
+{$asm}
+
+[DISABLE]
+{$lua}
+if syntaxcheck then return end
+print("[Loyalty] Values remain as set")
+{$asm}
+]]></AssemblerScript>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+
+        <CheatEntry>
           <ID>75</ID>
           <Description>"--- 门派资源 [Sect Resources] ---"</Description>
           <Options moHideChildren="1" moAllowManualCollapseAndExpand="1"/>
