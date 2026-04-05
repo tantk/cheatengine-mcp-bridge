@@ -1349,7 +1349,103 @@ print("[MeteoriteIron] Value remains as set")
 {$asm}
 </AssemblerScript>
             </CheatEntry>
-          </CheatEntries></CheatEntry><CheatEntry>
+          </CheatEntries></CheatEntry>
+        <CheatEntry>
+          <ID>77</ID>
+          <Description>"--- 节日事件 [Festival Events] ---"</Description>
+          <Options moHideChildren="1" moAllowManualCollapseAndExpand="1"/>
+          <GroupHeader>1</GroupHeader>
+          <Color>804000</Color>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>1500</ID>
+              <Description>"触发节日事件 [Trigger Festival]"</Description>
+              <Color>000000</Color>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript><![CDATA[[ENABLE]
+{$lua}
+if syntaxcheck then return end
+
+local cb = getAddress("cmdBuf")
+if not cb or cb == 0 then error("请先打开物品添加器并连接 [Open Item Adder and Connect first]") end
+
+local festivals = {
+  "StartSpringFestivalPlot",
+  "StartQingMingFestivalPlot",
+  "StartMidAutumnFestivalPlot",
+  "StartLaBaFestivalPlot",
+}
+local names = {
+  "[1] 春节 Spring Festival",
+  "[2] 清明 QingMing Festival",
+  "[3] 中秋 Mid-Autumn Festival",
+  "[4] 腊八 LaBa Festival",
+}
+
+local input = inputQuery("节日事件 [Festival Event]",
+  names[1] .. "\n" .. names[2] .. "\n" .. names[3] .. "\n" .. names[4] .. "\n\n选择节日编号 / Choose festival number:", "2")
+if not input then return end
+local idx = tonumber(input)
+if not idx or idx < 1 or idx > 4 then error("Invalid choice (1-4)") end
+
+local methodName = festivals[idx]
+
+-- Resolve PlotController and the festival method
+local c = _il2cpp_init()
+local pcClass = c.findClass("PlotController")
+if not pcClass then error("PlotController not found") end
+
+local getMethods = getAddress("GameAssembly.il2cpp_class_get_methods")
+local getMethodName = getAddress("GameAssembly.il2cpp_method_get_name")
+local riAddr = getAddress("GameAssembly.il2cpp_runtime_invoke")
+
+local mi = nil
+local iter = allocateMemory(8); writeQword(iter, 0)
+while true do
+  local m = executeCodeEx(0, nil, getMethods, pcClass, iter)
+  if not m or m == 0 then break end
+  local np = executeCodeEx(0, nil, getMethodName, m)
+  if np and readString(np, 64) == methodName then mi = m; break end
+end
+deAlloc(iter)
+if not mi then error(methodName .. " not found") end
+
+-- Get PlotController instance
+local pcSF = readQword(pcClass + 0xB8)
+local pcInst = readQword(pcSF)
+if not pcInst or pcInst == 0 then error("PlotController instance null") end
+
+-- Call on main thread via hookCode cmd=8
+writeQword(cb + 0x90, mi)
+writeQword(cb + 0x88, pcInst)
+writeQword(cb + 0xA0, 0)
+writeQword(cb + 0x68, riAddr)
+writeInteger(cb + 0x04, 0)
+writeInteger(cb, 8)
+
+local elapsed = 0
+while elapsed < 5000 do
+  if readInteger(cb + 0x04) ~= 0 then break end
+  sleep(16); elapsed = elapsed + 16
+end
+
+local status = readInteger(cb + 0x04)
+if status == 1 then
+  print(string.format("[Festival] %s triggered!", names[idx]))
+else
+  print(string.format("[Festival] Failed (status=%d)", status))
+end
+{$asm}
+
+[DISABLE]
+{$lua}
+if syntaxcheck then return end
+{$asm}
+]]></AssemblerScript>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
           <ID>97</ID>
           <Description>"--- 探索 (在物品添加器里) [Exploration - in Item Adder] ---"</Description>
           <GroupHeader>1</GroupHeader>
