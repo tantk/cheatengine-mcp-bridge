@@ -182,8 +182,28 @@ class CEBridgeClient:
             _log.warning(f"Pipe connect failed: {e}")
             return False
 
+    PIPE_TIMEOUT = 30  # seconds — kill hanging reads
+
+    def _read_with_timeout(self, nbytes):
+        """Read from pipe with timeout. Raises TimeoutError if CE doesn't respond."""
+        import concurrent.futures
+        def _blocking_read():
+            return win32file.ReadFile(self.handle, nbytes)[1]
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+            future = pool.submit(_blocking_read)
+            try:
+                return future.result(timeout=self.PIPE_TIMEOUT)
+            except concurrent.futures.TimeoutError:
+                # Can't cancel the blocking read, but we can close the handle
+                # which will cause the read to fail
+                self.close("read timeout")
+                raise TimeoutError(
+                    f"CE pipe read timed out after {self.PIPE_TIMEOUT}s. "
+                    "CE may be frozen or the Lua bridge is stuck."
+                )
+
     def send_command(self, method, params=None):
-        """Send command to CE Bridge with auto-reconnection on failure."""
+        """Send command to CE Bridge with auto-reconnection and timeout."""
         max_retries = 2
         last_error = None
 
@@ -208,7 +228,7 @@ class CEBridgeClient:
                 win32file.WriteFile(self.handle, header)
                 win32file.WriteFile(self.handle, req_json)
 
-                resp_header_buffer = win32file.ReadFile(self.handle, 4)[1]
+                resp_header_buffer = self._read_with_timeout(4)
                 if len(resp_header_buffer) < 4:
                     _log.error("Incomplete response header")
                     self.close("incomplete header")
@@ -222,7 +242,7 @@ class CEBridgeClient:
                     self.close("response too large")
                     raise ConnectionError(f"Response too large: {resp_len} bytes")
 
-                resp_body_buffer = win32file.ReadFile(self.handle, resp_len)[1]
+                resp_body_buffer = self._read_with_timeout(resp_len)
                 elapsed = time.time() - t0
                 _log.debug(f"<< {resp_len} bytes in {elapsed:.2f}s")
                 if elapsed > 5.0:
@@ -244,6 +264,10 @@ class CEBridgeClient:
 
                 return response
 
+            except TimeoutError as e:
+                _log.error(f"Pipe timeout: {e}")
+                last_error = ConnectionError(str(e))
+                break  # don't retry timeouts — CE is stuck
             except pywintypes.error as e:
                 _log.error(f"Pipe error: {e}")
                 self.close(f"pipe error: {e}")
